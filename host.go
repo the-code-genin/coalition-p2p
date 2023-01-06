@@ -51,8 +51,8 @@ func (host *Host) PeerID() [sha1.Size]byte {
 
 // Start listening for connections on the specified port for RPC requests
 func (host *Host) Listen(
-	connChan chan<- *net.Conn,
-	errChan chan<- error,
+	connChan chan net.Conn,
+	errChan chan error,
 ) {
 	defer close(connChan)
 	defer close(errChan)
@@ -67,7 +67,7 @@ func (host *Host) Listen(
 			errChan <- err
 			continue
 		}
-		connChan <- &conn
+		connChan <- conn
 	}
 }
 
