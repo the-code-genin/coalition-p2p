@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/sha256"
+	"crypto/sha1"
 	"testing"
 )
 
@@ -24,7 +24,7 @@ func TestNewHost(t *testing.T) {
 
 	// Ensure host has correct peer ID
 	hostID := host.PeerID()
-	expectedID := sha256.Sum256(pubKey)
+	expectedID := sha1.Sum(pubKey)
 	if !bytes.Equal(expectedID[:], hostID[:]) {
 		t.Errorf("unexpected host ID")
 	}

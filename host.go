@@ -93,11 +93,11 @@ func NewHost(
 	}
 
 	// Create a new host
-	host := Host{
+	host := &Host{
 		listener,
 		key,
 		false,
 	}
 
-	return &host, nil
+	return host, nil
 }
