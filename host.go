@@ -85,25 +85,17 @@ func (host *Host) Listen() {
 				// Prepare the response payload
 				payload, err := json.Marshal(&response)
 				if err != nil {
-					fmt.Println(err)
 					return
 				}
-				payload = append(payload, '\n')
 
-				// Send the response payload
-				i, err := conn.Write(payload)
-				if err != nil {
-					fmt.Println(err)
-				} else if i != len(payload) {
-					fmt.Println("unable to send full response body")
-				}
+				payload = append(payload, '\n')
+				conn.Write(payload)
 			}()
 
 			// Read data from the connection
 			data, err := bufio.NewReader(conn).ReadBytes('\n')
 			if err != nil {
 				response.Data = err.Error()
-				fmt.Println(err)
 				return
 			}
 
@@ -111,7 +103,6 @@ func (host *Host) Listen() {
 			var request RPCRequest
 			if err := json.Unmarshal(data, &request); err != nil {
 				response.Data = err.Error()
-				fmt.Println(err)
 				return
 			}
 
@@ -119,7 +110,6 @@ func (host *Host) Listen() {
 			handler, exists := host.rpcHandlers[request.Method]
 			if !exists {
 				response.Data = "Unknown RPC method"
-				fmt.Println("Unable to get RPC handler")
 				return
 			}
 
@@ -127,7 +117,6 @@ func (host *Host) Listen() {
 			response.Data, err = handler(request)
 			if err != nil {
 				response.Data = err.Error()
-				fmt.Println(err)
 				return
 			}
 			response.Success = true
