@@ -1,18 +1,36 @@
 package framework
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"net"
 	"regexp"
 	"strconv"
 )
 
+type RPCRequest struct {
+	Version int         `json:"version"`
+	Method  string      `json:"method"`
+	Data    interface{} `json:"data"`
+}
+
+type RPCResponse struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
+}
+
+type RPCHandlerFunc func(RPCRequest) (interface{}, error)
+
+type RPCHandlerFuncMap map[string]RPCHandlerFunc
+
 type Host struct {
-	listener net.Listener
-	key      ed25519.PrivateKey
-	closed   bool
+	listener    net.Listener
+	key         ed25519.PrivateKey
+	rpcHandlers RPCHandlerFuncMap
+	closed      bool
 }
 
 // Return the listening address
@@ -50,15 +68,70 @@ func (host *Host) PeerID() [sha1.Size]byte {
 }
 
 // Start listening for connections on the specified port for RPC requests
-func (host *Host) Listen(conns chan net.Conn) {
-	defer close(conns)
-
+func (host *Host) Listen() {
 	for !host.closed {
 		conn, err := host.listener.Accept()
 		if err != nil {
 			continue
 		}
-		conns <- conn
+
+		go func(conn net.Conn) {
+			response := RPCResponse{
+				Success: false,
+			}
+			defer func() {
+				defer conn.Close()
+
+				// Prepare the response payload
+				payload, err := json.Marshal(&response)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				payload = append(payload, '\n')
+
+				// Send the response payload
+				i, err := conn.Write(payload)
+				if err != nil {
+					fmt.Println(err)
+				} else if i != len(payload) {
+					fmt.Println("unable to send full response body")
+				}
+			}()
+
+			// Read data from the connection
+			data, err := bufio.NewReader(conn).ReadBytes('\n')
+			if err != nil {
+				response.Data = err.Error()
+				fmt.Println(err)
+				return
+			}
+
+			// Parse the RPC message
+			var request RPCRequest
+			if err := json.Unmarshal(data, &request); err != nil {
+				response.Data = err.Error()
+				fmt.Println(err)
+				return
+			}
+
+			// Get the handler for the RPC message
+			handler, exists := host.rpcHandlers[request.Method]
+			if !exists {
+				response.Data = "Unknown RPC method"
+				fmt.Println("Unable to get RPC handler")
+				return
+			}
+
+			// Process the response
+			response.Data, err = handler(request)
+			if err != nil {
+				response.Data = err.Error()
+				fmt.Println(err)
+				return
+			}
+			response.Success = true
+		}(conn)
 	}
 }
 
@@ -72,6 +145,7 @@ func (host *Host) Close() {
 func NewHost(
 	port int,
 	key ed25519.PrivateKey,
+	rpcHandlers RPCHandlerFuncMap,
 ) (*Host, error) {
 	// Start listening on the port
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
@@ -83,6 +157,7 @@ func NewHost(
 	host := &Host{
 		listener,
 		key,
+		rpcHandlers,
 		false,
 	}
 
