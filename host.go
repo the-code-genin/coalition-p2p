@@ -59,11 +59,15 @@ func (host *Host) Listen(
 
 	for {
 		if host.closed {
+			errChan <- fmt.Errorf("closed")
 			break
 		}
 
 		conn, err := host.listener.Accept()
 		if err != nil {
+			if host.closed {
+				continue
+			}
 			errChan <- err
 			continue
 		}
