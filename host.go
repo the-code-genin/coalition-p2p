@@ -76,13 +76,9 @@ func (host *Host) Listen(
 }
 
 // Close the host and any associated resources
-func (host *Host) Close() error {
-	if err := host.listener.Close(); err != nil {
-		return err
-	}
-
+func (host *Host) Close() {
 	host.closed = true
-	return nil
+	host.listener.Close()
 }
 
 // Create a new P2P host on the specified port with the Ed25519 private key

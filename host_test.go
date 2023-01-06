@@ -21,6 +21,7 @@ func TestNewHost(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer host.Close()
 
 	// Ensure host has correct peer ID
 	hostID := host.PeerID()
@@ -35,9 +36,5 @@ func TestNewHost(t *testing.T) {
 		t.Error(err)
 	} else if hostPort != port {
 		t.Errorf("unexpected host port")
-	}
-
-	if err = host.Close(); err != nil {
-		t.Error(err)
 	}
 }
