@@ -9,12 +9,12 @@ import (
 
 // A KBucket Entry
 type KBucketEntry struct {
-	key      [PeerIDSize]byte
+	key      []byte
 	lastSeen int64
 	distance int64
 }
 
-func (entry KBucketEntry) Key() [PeerIDSize]byte {
+func (entry KBucketEntry) Key() []byte {
 	return entry.key
 }
 
@@ -93,13 +93,13 @@ func (bucket *KBucket) Entries() []KBucketEntry {
 // Insert a new KBucketEntry
 // Returns true if inserted/updated
 func (bucket *KBucket) Insert(
-	key [PeerIDSize]byte,
+	key []byte,
 	distance int64,
 ) bool {
 	// If the entry is already in the K-Bucket
 	entryIndex := -1
 	for index, entry := range bucket.bucketEntries {
-		if bytes.Equal(entry.key[:], key[:]) {
+		if bytes.Equal(entry.key, key) {
 			entryIndex = index
 			break
 		}
@@ -141,7 +141,7 @@ func NewKBucket(
 	bucket := &KBucket{
 		replication:   replication,
 		pingPeriod:    pingPeriod,
-		bucketEntries: make([]KBucketEntry, replication),
+		bucketEntries: make([]KBucketEntry, 0),
 	}
 	return bucket, nil
 }
