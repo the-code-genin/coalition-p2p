@@ -1,3 +1,4 @@
 package framework
 
-const PeerKeySize = 20 // Size of peer ID in bytes
+// Size of peer ID in bytes
+const PeerKeySize = 20
