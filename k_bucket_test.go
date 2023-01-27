@@ -25,6 +25,10 @@ func TestKBucketStorage(t *testing.T) {
 			t.Errorf("A new entry should not be inserted")
 		}
 	}
+
+	if len(bucket.Entries()) != int(replicationParam) {
+		t.Errorf("bucket should have %d entries", replicationParam)
+	}
 }
 
 func TestKBucketStorageExpiry(t *testing.T) {
