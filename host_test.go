@@ -69,8 +69,12 @@ func TestRPCServer(t *testing.T) {
 	go host.Listen()
 	defer host.Close()
 
-	// Dail server
-	conn, err := net.Dial("tcp", host.Address())
+	// Dial server
+	address, err := host.Address()
+	if err != nil {
+		t.Error(err)
+	}
+	conn, err := net.Dial("tcp4", address)
 	if err != nil {
 		t.Error(err)
 	}

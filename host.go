@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"regexp"
-	"strconv"
 )
 
 type RPCRequest struct {
@@ -33,22 +31,37 @@ type Host struct {
 	closed      bool
 }
 
-// Return the listening address
-func (host *Host) Address() string {
-	return host.listener.Addr().String()
+// Return the listening IPv4 address
+func (host *Host) IPAddress() (string, error) {
+	tcpAddr, ok := host.listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return "", fmt.Errorf("unable to parse host port")
+	}
+	return tcpAddr.IP.To4().String(), nil
 }
 
-// Return the listening port
+// Return the listening tcp port
 func (host *Host) Port() (int, error) {
-	regExp := regexp.MustCompile(`^.+\:(\d+)$`)
-	match := regExp.FindAllStringSubmatch(host.Address(), -1)
-	if len(match) != 1 {
-		return 0, fmt.Errorf("unable to parse host port")
-	} else if len(match[0]) != 2 {
+	tcpAddr, ok := host.listener.Addr().(*net.TCPAddr)
+	if !ok {
 		return 0, fmt.Errorf("unable to parse host port")
 	}
+	return tcpAddr.Port, nil
+}
 
-	return strconv.Atoi(match[0][1])
+// Return the host full address i.e ipv4:port
+func (host *Host) Address() (string, error) {
+	address, err := host.IPAddress()
+	if err != nil {
+		return "", nil
+	}
+
+	port, err := host.Port()
+	if err != nil {
+		return "", nil
+	}
+
+	return fmt.Sprintf("%s:%d", address, port), nil
 }
 
 // Return the host ed25519 public key
@@ -130,14 +143,14 @@ func (host *Host) Close() {
 	host.listener.Close()
 }
 
-// Create a new P2P host on the specified port with the Ed25519 private key
+// Create a new P2P host on the specified ipv4 port with the Ed25519 private key
 func NewHost(
 	port int,
 	key ed25519.PrivateKey,
 	rpcHandlers RPCHandlerFuncMap,
 ) (*Host, error) {
 	// Start listening on the port
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	listener, err := net.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return nil, err
 	}
