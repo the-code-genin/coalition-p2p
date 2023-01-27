@@ -13,11 +13,11 @@ type KBucketEntry struct {
 	lastSeen int64
 }
 
-func (entry KBucketEntry) Key() []byte {
+func (entry *KBucketEntry) Key() []byte {
 	return entry.key
 }
 
-func (entry KBucketEntry) LastSeen() int64 {
+func (entry *KBucketEntry) LastSeen() int64 {
 	return entry.lastSeen
 }
 
@@ -25,12 +25,12 @@ func (entry KBucketEntry) LastSeen() int64 {
 type KBucket struct {
 	replication   int64
 	pingPeriod    int64
-	bucketEntries []KBucketEntry
+	bucketEntries []*KBucketEntry
 }
 
 // Do a merge sort on two KBucketEntry arrays
-func (bucket *KBucket) mergeSort(bucketA, bucketB []KBucketEntry) []KBucketEntry {
-	output := make([]KBucketEntry, 0)
+func (bucket *KBucket) mergeSort(bucketA, bucketB []*KBucketEntry) []*KBucketEntry {
+	output := make([]*KBucketEntry, 0)
 
 	// Atomic sub array
 	if len(bucketA) == 0 && len(bucketB) == 0 {
@@ -75,12 +75,12 @@ func (bucket *KBucket) mergeSort(bucketA, bucketB []KBucketEntry) []KBucketEntry
 func (bucket *KBucket) sort() {
 	bucket.bucketEntries = bucket.mergeSort(
 		bucket.bucketEntries,
-		make([]KBucketEntry, 0),
+		make([]*KBucketEntry, 0),
 	)
 }
 
 // Return the sorted bucket entries from recently seen to least recently seen
-func (bucket *KBucket) Entries() []KBucketEntry {
+func (bucket *KBucket) Entries() []*KBucketEntry {
 	bucket.sort()
 	return bucket.bucketEntries
 }
@@ -103,7 +103,7 @@ func (bucket *KBucket) Insert(key []byte) bool {
 	}
 
 	// A new entry
-	entry := KBucketEntry{key, time.Now().Unix()}
+	entry := &KBucketEntry{key, time.Now().Unix()}
 
 	// If the K-Bucket is not full, append the new entry
 	if len(bucket.bucketEntries) < int(bucket.replication) {
@@ -139,7 +139,7 @@ func (bucket *KBucket) Remove(key []byte) error {
 	// Splice the entry to be removed
 	partA := bucket.bucketEntries[:entryIndex]
 	partB := bucket.bucketEntries[entryIndex+1:]
-	bucket.bucketEntries = make([]KBucketEntry, 0)
+	bucket.bucketEntries = make([]*KBucketEntry, 0)
 	bucket.bucketEntries = append(bucket.bucketEntries, partA...)
 	bucket.bucketEntries = append(bucket.bucketEntries, partB...)
 
@@ -159,7 +159,7 @@ func NewKBucket(
 	bucket := &KBucket{
 		replication:   replication,
 		pingPeriod:    pingPeriod,
-		bucketEntries: make([]KBucketEntry, 0),
+		bucketEntries: make([]*KBucketEntry, 0),
 	}
 	return bucket, nil
 }
