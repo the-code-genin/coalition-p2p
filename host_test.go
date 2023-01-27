@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
+	"time"
 )
 
 func TestNewHost(t *testing.T) {
@@ -24,6 +25,8 @@ func TestNewHost(t *testing.T) {
 		port,
 		privKey,
 		map[string]RPCHandlerFunc{},
+		20,
+		int64(time.Hour.Seconds()),
 	)
 	if err != nil {
 		t.Error(err)
@@ -62,6 +65,8 @@ func TestRPCServer(t *testing.T) {
 				return "pong", nil
 			},
 		},
+		20,
+		int64(time.Hour.Seconds()),
 	)
 	if err != nil {
 		t.Error(err)

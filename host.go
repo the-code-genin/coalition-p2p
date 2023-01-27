@@ -26,6 +26,7 @@ type RPCHandlerFuncMap map[string]RPCHandlerFunc
 
 type Host struct {
 	listener    net.Listener
+	store       *PeerStore
 	key         ed25519.PrivateKey
 	rpcHandlers RPCHandlerFuncMap
 	closed      bool
@@ -148,6 +149,8 @@ func NewHost(
 	port int,
 	key ed25519.PrivateKey,
 	rpcHandlers RPCHandlerFuncMap,
+	maxPeers int64,
+	pingPeriod int64,
 ) (*Host, error) {
 	// Start listening on the port
 	listener, err := net.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
@@ -155,9 +158,16 @@ func NewHost(
 		return nil, err
 	}
 
+	// Create a peer store
+	store, err := NewPeerStore(maxPeers, pingPeriod)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create a new host
 	host := &Host{
 		listener,
+		store,
 		key,
 		rpcHandlers,
 		false,
