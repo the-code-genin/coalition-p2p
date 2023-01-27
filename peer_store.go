@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 )
 
 // A network peer
@@ -33,8 +34,15 @@ func (peer *Peer) Address() string {
 }
 
 // Return the peer's XOR distance from a key
-func (peer *Peer) Distance(key []byte) int64 {
-	return 0
+func (peer *Peer) Distance(key []byte) (*big.Int, error) {
+	if len(key) != len(peer.key) {
+		return nil, fmt.Errorf("key length miss-match")
+	}
+	res := make([]byte, 0)
+	for i := 0; i < len(peer.key); i++ {
+		res = append(res, peer.key[i]^key[i])
+	}
+	return big.NewInt(0).SetBytes(res), nil
 }
 
 type PeerStore struct {
