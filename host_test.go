@@ -31,7 +31,7 @@ func TestNewHost(t *testing.T) {
 	defer host.Close()
 
 	// Ensure host has correct peer ID
-	hostID := host.PeerID()
+	hostID := host.PeerKey()
 	expectedID := sha1.Sum(pubKey)
 	if !bytes.Equal(expectedID[:], hostID[:]) {
 		t.Errorf("unexpected host ID")

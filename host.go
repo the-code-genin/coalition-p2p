@@ -62,7 +62,7 @@ func (host *Host) Sign(digest []byte) []byte {
 }
 
 // Returns the 160-bit hash of the public key as the peer ID
-func (host *Host) PeerID() [PeerIDSize]byte {
+func (host *Host) PeerKey() [PeerKeySize]byte {
 	pk := host.key.Public().(ed25519.PublicKey)
 	return sha1.Sum([]byte(pk))
 }

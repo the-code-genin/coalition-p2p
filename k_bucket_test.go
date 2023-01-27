@@ -17,7 +17,7 @@ func TestKBucketStorage(t *testing.T) {
 
 	// Add three times the number of replication entries
 	for i := int64(0); i < replicationParam*3; i++ {
-		key := make([]byte, PeerIDSize)
+		key := make([]byte, PeerKeySize)
 		if _, err := rand.Read(key); err != nil {
 			t.Error(err)
 		}
@@ -42,7 +42,7 @@ func TestKBucketStorageExpiry(t *testing.T) {
 
 	// Add three times the number of replication entries
 	for i := int64(0); i < replicationParam*3; i++ {
-		key := make([]byte, PeerIDSize)
+		key := make([]byte, PeerKeySize)
 		if _, err := rand.Read(key); err != nil {
 			t.Error(err)
 		}
@@ -63,7 +63,7 @@ func TestKBucketRemoval(t *testing.T) {
 
 	// Populate the bucket
 	for i := int64(0); i < replicationParam; i++ {
-		key := make([]byte, PeerIDSize)
+		key := make([]byte, PeerKeySize)
 		if _, err := rand.Read(key); err != nil {
 			t.Error(err)
 		}
