@@ -130,6 +130,30 @@ func (bucket *KBucket) Insert(
 	return false
 }
 
+// Remove a KBucketEntry
+func (bucket *KBucket) Remove(key []byte) error {
+	// Check if the entry is in the K-Bucket
+	entryIndex := -1
+	for index, entry := range bucket.bucketEntries {
+		if bytes.Equal(entry.key, key) {
+			entryIndex = index
+			break
+		}
+	}
+	if entryIndex == -1 {
+		return fmt.Errorf("k-bucket entry not found")
+	}
+
+	// Splice the entry to be removed
+	partA := bucket.bucketEntries[:entryIndex]
+	partB := bucket.bucketEntries[entryIndex+1:]
+	bucket.bucketEntries = make([]KBucketEntry, 0)
+	bucket.bucketEntries = append(bucket.bucketEntries, partA...)
+	bucket.bucketEntries = append(bucket.bucketEntries, partB...)
+
+	return nil
+}
+
 // Replication must be >= 1
 // A ping period <= 0 means that new entries will always be inserted into the bucket
 func NewKBucket(

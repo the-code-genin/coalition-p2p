@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"bytes"
 	"crypto/rand"
 	"testing"
 	"time"
@@ -49,5 +50,34 @@ func TestKBucketStorageExpiry(t *testing.T) {
 		if !bucket.Insert(key, i) {
 			t.Errorf("A new entry should be inserted")
 		}
+	}
+}
+
+func TestKBucketRemoval(t *testing.T) {
+	replicationParam := int64(20)
+	pingPeriod := int64(time.Hour.Seconds())
+	bucket, err := NewKBucket(replicationParam, pingPeriod)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Populate the bucket
+	for i := int64(0); i < replicationParam; i++ {
+		key := make([]byte, PeerIDSize)
+		if _, err := rand.Read(key); err != nil {
+			t.Error(err)
+		}
+
+		if !bucket.Insert(key, i) {
+			t.Errorf("A new entry should be inserted")
+		}
+	}
+
+	entries := bucket.Entries()
+	bucket.Remove(entries[0].key)
+	if len(bucket.Entries()) != len(entries)-1 {
+		t.Errorf("bucket should have %d entries", len(entries)-1)
+	} else if bytes.Equal(bucket.Entries()[0].key, entries[0].key) {
+		t.Errorf("bucket entry not deleted")
 	}
 }
