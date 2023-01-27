@@ -130,6 +130,8 @@ func (bucket *KBucket) Insert(
 	return false
 }
 
+// Replication must be >= 1
+// A ping period <= 0 means that new entries will always be inserted into the bucket
 func NewKBucket(
 	replication int64,
 	pingPeriod int64,
