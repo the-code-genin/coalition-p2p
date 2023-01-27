@@ -11,7 +11,6 @@ import (
 type KBucketEntry struct {
 	key      []byte
 	lastSeen int64
-	distance int64
 }
 
 func (entry KBucketEntry) Key() []byte {
@@ -20,10 +19,6 @@ func (entry KBucketEntry) Key() []byte {
 
 func (entry KBucketEntry) LastSeen() int64 {
 	return entry.lastSeen
-}
-
-func (entry KBucketEntry) Distance() int64 {
-	return entry.distance
 }
 
 // K Bucket implementation
@@ -92,10 +87,7 @@ func (bucket *KBucket) Entries() []KBucketEntry {
 
 // Insert a new KBucketEntry
 // Returns true if inserted/updated
-func (bucket *KBucket) Insert(
-	key []byte,
-	distance int64,
-) bool {
+func (bucket *KBucket) Insert(key []byte) bool {
 	// If the entry is already in the K-Bucket
 	entryIndex := -1
 	for index, entry := range bucket.bucketEntries {
@@ -111,7 +103,7 @@ func (bucket *KBucket) Insert(
 	}
 
 	// A new entry
-	entry := KBucketEntry{key, time.Now().Unix(), distance}
+	entry := KBucketEntry{key, time.Now().Unix()}
 
 	// If the K-Bucket is not full, append the new entry
 	if len(bucket.bucketEntries) < int(bucket.replication) {

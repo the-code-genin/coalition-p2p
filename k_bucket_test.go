@@ -22,7 +22,7 @@ func TestKBucketStorage(t *testing.T) {
 			t.Error(err)
 		}
 
-		if bucket.Insert(key, i) && i >= replicationParam {
+		if bucket.Insert(key) && i >= replicationParam {
 			t.Errorf("A new entry should not be inserted")
 		}
 	}
@@ -47,7 +47,7 @@ func TestKBucketStorageExpiry(t *testing.T) {
 			t.Error(err)
 		}
 
-		if !bucket.Insert(key, i) {
+		if !bucket.Insert(key) {
 			t.Errorf("A new entry should be inserted")
 		}
 	}
@@ -68,7 +68,7 @@ func TestKBucketRemoval(t *testing.T) {
 			t.Error(err)
 		}
 
-		if !bucket.Insert(key, i) {
+		if !bucket.Insert(key) {
 			t.Errorf("A new entry should be inserted")
 		}
 	}
