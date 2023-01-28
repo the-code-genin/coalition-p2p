@@ -50,7 +50,7 @@ func (host *Host) Port() (int, error) {
 	return tcpAddr.Port, nil
 }
 
-// Return the host full address i.e ipv4:port
+// Return the host's fully qualified tcp address i.e tcp ipv4:port
 func (host *Host) Address() (string, error) {
 	address, err := host.IPAddress()
 	if err != nil {
@@ -150,6 +150,7 @@ func NewHost(
 	key ed25519.PrivateKey,
 	rpcHandlers RPCHandlerFuncMap,
 	maxPeers int64,
+	concurrentRequests int64,
 	pingPeriod int64,
 ) (*Host, error) {
 	// Start listening on the port

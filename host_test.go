@@ -25,7 +25,8 @@ func TestNewHost(t *testing.T) {
 		port,
 		privKey,
 		map[string]RPCHandlerFunc{},
-		20,
+		20, // Max peers
+		3,  // Max concurrent requests
 		int64(time.Hour.Seconds()),
 	)
 	if err != nil {
@@ -58,14 +59,15 @@ func TestRPCServer(t *testing.T) {
 
 	// Create a new host on port 3000
 	host, err := NewHost(
-		3000,
+		3000, // Port
 		privKey,
 		RPCHandlerFuncMap{
 			"ping": func(RPCRequest) (interface{}, error) {
 				return "pong", nil
 			},
 		},
-		20,
+		20, // Max peers
+		3,  // Max concurrent requests
 		int64(time.Hour.Seconds()),
 	)
 	if err != nil {
