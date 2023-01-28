@@ -2,6 +2,7 @@ package coalition
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -54,12 +55,11 @@ func (peer *Peer) Distance(key []byte) (*big.Int, error) {
 }
 
 type PeerStore struct {
-	locusKey    []byte
-	maxPeers    int64
-	pingPeriod  int64
-	peers       []*Peer
-	minDistance *big.Int
-	maxDistance *big.Int
+	locusKey   []byte
+	maxPeers   int64
+	pingPeriod int64
+	peers      []*Peer
+	kbucket    map[string][][]byte
 }
 
 // Do a merge sort on two KBucketEntry arrays
@@ -113,9 +113,29 @@ func (store *PeerStore) sort() {
 	)
 }
 
+// Calculate the KBucket key for a peer as an hex value
+func (store *PeerStore) calculateKBucketKey(peer *Peer) (string, error) {
+	distanceFromLocus, err := peer.Distance(store.locusKey)
+	if err != nil {
+		return "", err
+	}
+	noBits := len(store.locusKey) * 8
+	for i := int64(noBits - 1); i >= 0; i-- {
+		key := new(big.Int).Exp(
+			new(big.Int).SetInt64(2),
+			new(big.Int).SetInt64(i),
+			nil,
+		)
+		if new(big.Int).And(distanceFromLocus, key).Cmp(key) == 0 {
+			return hex.EncodeToString(key.Bytes()), nil
+		}
+	}
+	return hex.EncodeToString([]byte{0}), nil
+}
+
 // Remove a peer
 func (store *PeerStore) Remove(key []byte) error {
-	// Get the peer index
+	// Get the peer index in the peer list
 	peerIndex := -1
 	for index, peer := range store.peers {
 		if bytes.Equal(peer.key, key) {
@@ -124,70 +144,130 @@ func (store *PeerStore) Remove(key []byte) error {
 		}
 	}
 	if peerIndex == -1 {
-		return fmt.Errorf("peer not found")
+		return fmt.Errorf("peer not found in peers list")
 	}
 
-	// Splice the peer to be removed
-	partA := store.peers[:peerIndex]
-	partB := store.peers[peerIndex+1:]
+	// Calculate the peer kbucket key
+	peer := store.peers[peerIndex]
+	bucketKey, err := store.calculateKBucketKey(peer)
+	if err != nil {
+		return err
+	}
+	if _, exists := store.kbucket[bucketKey]; !exists {
+		return fmt.Errorf("kbucket entry does not exist for peer")
+	}
+
+	// Calculate the peer key index in the kbucket entry
+	peerKeyIndex := -1
+	for index, peerKey := range store.kbucket[bucketKey] {
+		if bytes.Equal(peer.key, peerKey) {
+			peerKeyIndex = index
+			break
+		}
+	}
+	if peerKeyIndex == -1 {
+		return fmt.Errorf("peer key not found in kbucket")
+	}
+
+	// Splice the peer key from the kbucket entry
+	keysA := store.kbucket[bucketKey][:peerKeyIndex]
+	keysB := store.kbucket[bucketKey][peerKeyIndex+1:]
+	store.kbucket[bucketKey] = make([][]byte, 0)
+	store.kbucket[bucketKey] = append(store.kbucket[bucketKey], keysA...)
+	store.kbucket[bucketKey] = append(store.kbucket[bucketKey], keysB...)
+
+	// Splice the peer to be removed from the peer list
+	peersA := store.peers[:peerIndex]
+	peersB := store.peers[peerIndex+1:]
 	store.peers = make([]*Peer, 0)
-	store.peers = append(store.peers, partA...)
-	store.peers = append(store.peers, partB...)
+	store.peers = append(store.peers, peersA...)
+	store.peers = append(store.peers, peersB...)
 
 	return nil
 }
 
 // Insert/update a peer in the store and k-bucket
+// If the peer already exists in the store, it's last seen is updated
 // Returns true if updated/inserted
 func (store *PeerStore) Insert(
 	key []byte,
 	ipAddress string,
 	port int,
-) bool {
+) (bool, error) {
 	// If the peer is already in the store
-	entryIndex := -1
+	peerIndex := -1
 	for index, peer := range store.peers {
 		if bytes.Equal(peer.key, key) {
-			entryIndex = index
+			peerIndex = index
 			break
 		}
 	}
-	if entryIndex != -1 {
-		peer := store.peers[entryIndex]
+	if peerIndex != -1 {
+		peer := store.peers[peerIndex]
 		peer.ipAddress = ipAddress
 		peer.port = port
 		peer.lastSeen = time.Now().Unix()
-		return true
+		return true, nil
 	}
 
-	// New peer
+	// Create new peer and calculate it's bucket key
+	// Create the bucket entry if it does not exist yet
 	peer := &Peer{key, ipAddress, port, time.Now().Unix()}
-	distanceFromLocus, err := peer.Distance(store.locusKey)
+	bucketKey, err := store.calculateKBucketKey(peer)
 	if err != nil {
-		return false
-	} else if distanceFromLocus.Cmp(store.minDistance) == -1 {
-		// Distance from locus is less than minimum allowed distance
-		return false
-	} else if distanceFromLocus.Cmp(store.maxDistance) == 1 {
-		// Distance from locus is more than maximum allowed distance
-		return false
+		return false, err
+	}
+	if _, exists := store.kbucket[bucketKey]; !exists {
+		store.kbucket[bucketKey] = make([][]byte, 0)
 	}
 
 	// If the store is not full, append the new entry
 	if len(store.peers) < int(store.maxPeers) {
 		store.peers = append(store.peers, peer)
-		return true
+		store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+		return true, nil
+	}
+
+	// If it's kbucket entry is empty but the store is full
+	// Find a bloated entry to prune to make space for the new peer
+	if len(store.kbucket[bucketKey]) == 0 {
+		pruned := false
+		for _, entries := range store.kbucket {
+			// Not a bloated entry
+			if len(entries) <= 1 {
+				continue
+			}
+
+			// Remove the last peer in the entry
+			entryPeerKey := entries[len(entries)-1]
+			if err := store.Remove(entryPeerKey); err != nil {
+				return false, err
+			}
+			pruned = true
+			break
+		}
+
+		// If an old node was pruned
+		if pruned {
+			store.peers = append(store.peers, peer)
+			store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+			return true, nil
+		}
 	}
 
 	// If the least recently seen peer hasn't been seen in over ping period seconds replace it
 	store.sort()
 	leastSeenPeer := store.peers[len(store.peers)-1]
 	if time.Now().Unix()-leastSeenPeer.lastSeen > store.pingPeriod {
-		store.peers[len(store.peers)-1] = peer
-		return true
+		if err := store.Remove(leastSeenPeer.key); err != nil {
+			return false, err
+		}
+		store.peers = append(store.peers, peer)
+		store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 // Gets a peer by it's key if it exists
@@ -218,26 +298,11 @@ func NewPeerStore(
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
 
-	// Calculate min and max allowed distance from locus
-	locusNo := big.NewInt(0).SetBytes(locusKey)
-	minDistance := new(big.Int).Exp(
-		big.NewInt(2),
-		locusNo,
-		nil,
-	)
-	maxDistance := new(big.Int).Exp(
-		big.NewInt(2),
-		new(big.Int).Add(locusNo, big.NewInt(1)),
-		nil,
-	)
-
 	store := &PeerStore{
-		locusKey:    locusKey,
-		maxPeers:    maxPeers,
-		pingPeriod:  pingPeriod,
-		peers:       make([]*Peer, 0),
-		minDistance: minDistance,
-		maxDistance: maxDistance,
+		locusKey:   locusKey,
+		maxPeers:   maxPeers,
+		pingPeriod: pingPeriod,
+		peers:      make([]*Peer, 0),
 	}
 	return store, nil
 }
