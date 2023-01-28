@@ -44,9 +44,13 @@ func (peer *Peer) LastSeen() int64 {
 // Return the peer's XOR distance from a key
 func (peer *Peer) Distance(key []byte) (*big.Int, error) {
 	if len(key) != len(peer.key) {
-		return nil, fmt.Errorf("key length miss-match")
+		return nil, fmt.Errorf("peer key length miss-match")
 	}
-	return XORBytes(peer.key, key)
+	xorBytes, err := XORBytes(peer.key, key)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(xorBytes), nil
 }
 
 type PeerStore struct {
