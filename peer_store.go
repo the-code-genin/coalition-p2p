@@ -303,6 +303,7 @@ func NewPeerStore(
 		maxPeers:   maxPeers,
 		pingPeriod: pingPeriod,
 		peers:      make([]*Peer, 0),
+		kbucket:    make(map[string][][]byte),
 	}
 	return store, nil
 }
