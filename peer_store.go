@@ -46,17 +46,16 @@ func (peer *Peer) Distance(key []byte) (*big.Int, error) {
 	if len(key) != len(peer.key) {
 		return nil, fmt.Errorf("key length miss-match")
 	}
-	res := make([]byte, 0)
-	for i := 0; i < len(peer.key); i++ {
-		res = append(res, peer.key[i]^key[i])
-	}
-	return big.NewInt(0).SetBytes(res), nil
+	return XORBytes(peer.key, key)
 }
 
 type PeerStore struct {
-	maxPeers   int64
-	pingPeriod int64
-	peers      []*Peer
+	locusKey    []byte
+	maxPeers    int64
+	pingPeriod  int64
+	peers       []*Peer
+	minDistance *big.Int
+	maxDistance *big.Int
 }
 
 // Do a merge sort on two KBucketEntry arrays
@@ -112,6 +111,7 @@ func (store *PeerStore) sort() {
 
 // Remove a peer
 func (store *PeerStore) Remove(key []byte) error {
+	// Get the peer index
 	peerIndex := -1
 	for index, peer := range store.peers {
 		if bytes.Equal(peer.key, key) {
@@ -158,6 +158,16 @@ func (store *PeerStore) Insert(
 
 	// New peer
 	peer := &Peer{key, ipAddress, port, time.Now().Unix()}
+	distanceFromLocus, err := peer.Distance(store.locusKey)
+	if err != nil {
+		return false
+	} else if distanceFromLocus.Cmp(store.minDistance) == -1 {
+		// Distance from locus is less than minimum allowed distance
+		return false
+	} else if distanceFromLocus.Cmp(store.maxDistance) == 1 {
+		// Distance from locus is more than maximum allowed distance
+		return false
+	}
 
 	// If the store is not full, append the new entry
 	if len(store.peers) < int(store.maxPeers) {
@@ -192,9 +202,11 @@ func (store *PeerStore) Peers() []*Peer {
 	return store.peers
 }
 
-// maxPeers must be >= 1
-// pingPeriod <= 0 means that new peers will always be inserted into the store
+// locusKey: the host node's peer key
+// maxPeers: must be >= 1
+// pingPeriod: <= 0 means that new peers will always be inserted into the store
 func NewPeerStore(
+	locusKey []byte,
 	maxPeers int64,
 	pingPeriod int64,
 ) (*PeerStore, error) {
@@ -202,10 +214,26 @@ func NewPeerStore(
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
 
+	// Calculate min and max allowed distance from locus
+	locusNo := big.NewInt(0).SetBytes(locusKey)
+	minDistance := new(big.Int).Exp(
+		big.NewInt(2),
+		locusNo,
+		nil,
+	)
+	maxDistance := new(big.Int).Exp(
+		big.NewInt(2),
+		new(big.Int).Add(locusNo, big.NewInt(1)),
+		nil,
+	)
+
 	store := &PeerStore{
-		maxPeers:   maxPeers,
-		pingPeriod: pingPeriod,
-		peers:      make([]*Peer, 0),
+		locusKey:    locusKey,
+		maxPeers:    maxPeers,
+		pingPeriod:  pingPeriod,
+		peers:       make([]*Peer, 0),
+		minDistance: minDistance,
+		maxDistance: maxDistance,
 	}
 	return store, nil
 }

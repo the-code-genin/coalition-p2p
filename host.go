@@ -159,7 +159,7 @@ func NewHost(
 	}
 
 	// Create a peer store
-	store, err := NewPeerStore(maxPeers, pingPeriod)
+	store, err := NewPeerStore(nil, maxPeers, pingPeriod)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +172,8 @@ func NewHost(
 		rpcHandlers,
 		false,
 	}
+	peerKey := host.PeerKey()
+	store.locusKey = peerKey[:]
 
 	return host, nil
 }
