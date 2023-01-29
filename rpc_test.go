@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -50,7 +49,6 @@ func TestRPCServer(t *testing.T) {
 		t.Error(err)
 	}
 	defer conn.Close()
-	fmt.Println("Dialed host")
 
 	// Generate a key pair for the client
 	clientPubKey, clientPrivKey, err := ed25519.GenerateKey(rand.Reader)
@@ -67,25 +65,21 @@ func TestRPCServer(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Serialized request")
 
 	// Prepare the peer signature for the serialized request
 	hash := sha256.Sum256(serializedRequest)
 	signature := make([]byte, 0)
 	signature = append(signature, clientPubKey...)
 	signature = append(signature, ed25519.Sign(clientPrivKey, hash[:])...)
-	fmt.Println("Generated signature")
 
 	// Send the full request payload
 	requestPayload := make([]byte, 0)
 	requestPayload = append(requestPayload, signature...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
-	fmt.Println("Generated payload")
 	if _, err = conn.Write(requestPayload); err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Sent request payload")
 
 	// Read response payload
 	responsePayload, err := bufio.NewReader(conn).ReadBytes('\n')
@@ -94,12 +88,10 @@ func TestRPCServer(t *testing.T) {
 	} else if len(responsePayload) < PeerSignatureSize {
 		t.Errorf("Unable to read signature from response payload")
 	}
-	fmt.Println("Read response payload")
 
 	// Parse the peer signature and response from the response payload
 	peerSignature := responsePayload[:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
-	fmt.Println("Parsed response payload peer signature and request")
 
 	// Verify the peer signature
 	hash = sha256.Sum256(peerResponse)
@@ -110,7 +102,6 @@ func TestRPCServer(t *testing.T) {
 	} else if !bytes.Equal(hostPubKey, publicKey) {
 		t.Errorf("Response payload not signed by host")
 	}
-	fmt.Println("Verified response payload peer signature")
 
 	// Parse the RPC response from the payload
 	var response RPCResponse
