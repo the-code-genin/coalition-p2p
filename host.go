@@ -129,7 +129,7 @@ func (host *Host) SendMessage(
 	requestPayload = append(requestPayload, signature...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
-	if _, err = conn.Write(requestPayload); err != nil {
+	if _, err := conn.Write(requestPayload); err != nil {
 		return nil, err
 	}
 
@@ -138,7 +138,7 @@ func (host *Host) SendMessage(
 	if err != nil {
 		return nil, err
 	} else if len(responsePayload) < PeerSignatureSize {
-		return nil, fmt.Errorf("Unable to read signature from response payload")
+		return nil, fmt.Errorf("unable to read signature from response payload")
 	}
 
 	// Parse the peer signature and response from the response payload
@@ -150,7 +150,7 @@ func (host *Host) SendMessage(
 	publicKey := peerSignature[:ed25519.PublicKeySize]
 	ecSignature := peerSignature[ed25519.PublicKeySize:]
 	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
-		return nil, fmt.Errorf("Invalid peer signature")
+		return nil, fmt.Errorf("invalid peer signature")
 	}
 
 	// Parse the peer information and update the host's peer store
