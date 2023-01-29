@@ -4,4 +4,4 @@ A peer-to-peer networking library that utilizes the Kademlia algorithm for peer 
 
 # Author
 
-(Mohammed Adekunle)[https://github.com/the-code-genin]
+[Mohammed Adekunle](https://github.com/the-code-genin)
