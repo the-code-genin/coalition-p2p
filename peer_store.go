@@ -47,11 +47,11 @@ func (peer *Peer) Distance(key []byte) (*big.Int, error) {
 	if len(key) != len(peer.key) {
 		return nil, fmt.Errorf("peer key length miss-match")
 	}
-	xorBytes, err := XORBytes(peer.key, key)
-	if err != nil {
-		return nil, err
-	}
-	return new(big.Int).SetBytes(xorBytes), nil
+	distance := new(big.Int).Xor(
+		new(big.Int).SetBytes(peer.key),
+		new(big.Int).SetBytes(key),
+	)
+	return distance, nil
 }
 
 type PeerStore struct {
