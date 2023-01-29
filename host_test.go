@@ -96,7 +96,6 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	go hostB.Listen()
 	defer hostB.Close()
 
 	if len(hostA.Peers()) != 0 {
