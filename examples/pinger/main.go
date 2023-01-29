@@ -45,6 +45,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	peerKey := host.PeerKey()
+	fmt.Printf("Sending ping from %s\n", hex.EncodeToString(peerKey[:]))
 	fmt.Println(response.(string))
 	fmt.Printf("Peers: %d\n", len(host.Peers()))
 }
