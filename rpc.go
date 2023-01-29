@@ -38,19 +38,23 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	defer func() {
 		defer conn.Close()
 
-		// Prepare the response payload
-		payload, err := json.Marshal(&response)
+		// Serialize the peer response
+		serializedResponse, err := json.Marshal(&response)
 		if err != nil {
 			return
 		}
-		payload = append(payload, '\n')
 
-		// Prepare the response signature
-		hash := sha256.Sum256(payload)
-		payload = append(payload, host.PublicKey()...)
-		payload = append(payload, host.Sign(hash[:])...)
-		payload = append(payload, '\n')
+		// Prepare the peer signature for the serialized response
+		hash := sha256.Sum256(serializedResponse)
+		signature := make([]byte, 0)
+		signature = append(signature, host.PublicKey()...)
+		signature = append(signature, host.Sign(hash[:])...)
 
+		// Send the full response payload
+		payload := make([]byte, 0)
+		payload = append(payload, signature...)
+		payload = append(payload, serializedResponse...)
+		payload = append(payload, '\n')
 		conn.Write(payload)
 	}()
 
@@ -59,29 +63,26 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	if err != nil {
 		response.Data = err.Error()
 		return
+	} else if len(payload) < PeerSignatureSize {
+		response.Data = "Unable to read signature from request payload"
+		return
 	}
-	fmt.Println("Read payload")
+	fmt.Println("Read request payload")
 
-	// Read the peer's signature from the connection
-	peerSignature, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil {
-		fmt.Println(err.Error())
-		response.Data = err.Error()
-		return
-	} else if len(peerSignature) != PeerSignatureSize {
-		fmt.Println("Invalid peer signature")
-		response.Data = "Invalid peer signature"
-		return
-	}
-	fmt.Println("Read signature")
+	// Parse the peer signature and request from the payload
+	peerSignature := payload[:PeerSignatureSize]
+	peerRequest := payload[PeerSignatureSize:]
+	fmt.Println("Parsed request payload peer signature and request")
 
 	// Verify the peer signature
-	hash := sha256.Sum256(payload)
+	hash := sha256.Sum256(peerRequest)
 	publicKey := peerSignature[:ed25519.PublicKeySize]
-	if !ed25519.Verify(publicKey, hash[:], peerSignature[ed25519.PublicKeySize:]) {
+	ecSignature := peerSignature[ed25519.PublicKeySize:]
+	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
 		response.Data = "Invalid peer signature"
 		return
 	}
+	fmt.Println("Verified request payload peer signature")
 
 	// Parse the peer information and Uupdate the host's peer store
 	peerKey := sha1.Sum(publicKey)
@@ -95,13 +96,15 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		response.Data = err.Error()
 		return
 	}
+	fmt.Println("Updated peer store")
 
 	// Parse the RPC request from the payload
 	var request RPCRequest
-	if err := json.Unmarshal(payload, &request); err != nil {
+	if err := json.Unmarshal(peerRequest, &request); err != nil {
 		response.Data = err.Error()
 		return
 	}
+	fmt.Println("Parsed RPC request from request payload")
 
 	// Get the registered handler for the RPC request
 	handler, exists := host.rpcHandlers[request.Method]
@@ -109,6 +112,7 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		response.Data = "Unknown RPC method"
 		return
 	}
+	fmt.Println("Gotten RPC request handler")
 
 	// Handle the RPC request
 	response.Data, err = handler(
@@ -121,4 +125,5 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		return
 	}
 	response.Success = true
+	fmt.Println("Handled peer request")
 }
