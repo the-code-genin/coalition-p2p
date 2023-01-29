@@ -71,7 +71,7 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 
 	// Parse the peer signature and request from the payload
 	peerSignature := payload[:PeerSignatureSize]
-	peerRequest := payload[PeerSignatureSize:]
+	peerRequest := payload[PeerSignatureSize : len(payload)-1]
 	fmt.Println("Parsed request payload peer signature and request")
 
 	// Verify the peer signature

@@ -67,18 +67,21 @@ func TestRPCServer(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	fmt.Println("Serialized request")
 
 	// Prepare the peer signature for the serialized request
 	hash := sha256.Sum256(serializedRequest)
 	signature := make([]byte, 0)
 	signature = append(signature, clientPubKey...)
 	signature = append(signature, ed25519.Sign(clientPrivKey, hash[:])...)
+	fmt.Println("Generated signature")
 
 	// Send the full request payload
 	requestPayload := make([]byte, 0)
 	requestPayload = append(requestPayload, signature...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
+	fmt.Println("Generated payload")
 	if _, err = conn.Write(requestPayload); err != nil {
 		t.Error(err)
 	}
@@ -95,7 +98,7 @@ func TestRPCServer(t *testing.T) {
 
 	// Parse the peer signature and response from the response payload
 	peerSignature := responsePayload[:PeerSignatureSize]
-	peerResponse := responsePayload[PeerSignatureSize:]
+	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
 	fmt.Println("Parsed response payload peer signature and request")
 
 	// Verify the peer signature
