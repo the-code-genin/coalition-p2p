@@ -1,10 +1,8 @@
 package coalition
 
 import (
-	"bufio"
 	"crypto/ed25519"
 	"crypto/sha1"
-	"encoding/json"
 	"fmt"
 	"net"
 )
@@ -83,53 +81,7 @@ func (host *Host) Listen() {
 		if err != nil {
 			continue
 		}
-
-		go func(conn net.Conn) {
-			response := RPCResponse{
-				Success: false,
-			}
-			defer func() {
-				defer conn.Close()
-
-				// Prepare the response payload
-				payload, err := json.Marshal(&response)
-				if err != nil {
-					return
-				}
-
-				payload = append(payload, '\n')
-				conn.Write(payload)
-			}()
-
-			// Read data from the connection
-			data, err := bufio.NewReader(conn).ReadBytes('\n')
-			if err != nil {
-				response.Data = err.Error()
-				return
-			}
-
-			// Parse the RPC message
-			var request RPCRequest
-			if err := json.Unmarshal(data, &request); err != nil {
-				response.Data = err.Error()
-				return
-			}
-
-			// Get the handler for the RPC message
-			handler, exists := host.rpcHandlers[request.Method]
-			if !exists {
-				response.Data = "Unknown RPC method"
-				return
-			}
-
-			// Process the response
-			response.Data, err = handler(request)
-			if err != nil {
-				response.Data = err.Error()
-				return
-			}
-			response.Success = true
-		}(conn)
+		go HandleRPCConnection(host, conn)
 	}
 }
 
