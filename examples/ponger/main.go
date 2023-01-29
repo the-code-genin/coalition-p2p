@@ -41,6 +41,6 @@ func main() {
 	}
 	defer host.Close()
 
-	fmt.Printf("Listening on port [:%d]", port)
+	fmt.Printf("Listening on port [:%d]\n", port)
 	host.Listen()
 }
