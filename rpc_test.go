@@ -21,7 +21,7 @@ func TestRPCServer(t *testing.T) {
 
 	// Create a new host on port 3000
 	host, err := NewHost(
-		3000, // Port
+		3001, // Port
 		hostPrivKey,
 		RPCHandlerFuncMap{
 			"ping": func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
