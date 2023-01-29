@@ -71,6 +71,7 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	go hostA.Listen()
 	defer hostA.Close()
 
 	// Create hostB listening on port 3001
@@ -95,6 +96,7 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	go hostB.Listen()
 	defer hostB.Close()
 
 	if len(hostA.Peers()) != 0 {
