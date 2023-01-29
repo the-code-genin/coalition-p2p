@@ -25,9 +25,10 @@ func TestNewHost(t *testing.T) {
 		port,
 		privKey,
 		map[string]RPCHandlerFunc{},
-		20, // Max peers
-		3,  // Max concurrent requests
-		int64(time.Hour.Seconds()),
+		20,                                 // Max peers
+		3,                                  // Max concurrent requests
+		int64(time.Hour.Seconds()),         // LatencyPeriod
+		int64((time.Minute * 5).Seconds()), // PingPeriod
 	)
 	if err != nil {
 		t.Error(err)
@@ -66,9 +67,10 @@ func TestRPCServer(t *testing.T) {
 				return "pong", nil
 			},
 		},
-		20, // Max peers
-		3,  // Max concurrent requests
-		int64(time.Hour.Seconds()),
+		20,                                 // Max peers
+		3,                                  // Max concurrent requests
+		int64(time.Hour.Seconds()),         // LatencyPeriod
+		int64((time.Minute * 5).Seconds()), // PingPeriod
 	)
 	if err != nil {
 		t.Error(err)
