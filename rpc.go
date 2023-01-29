@@ -80,7 +80,7 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		return
 	}
 
-	// Parse the peer information and Uupdate the host's peer store
+	// Parse the peer information and update the host's peer store
 	peerKey := sha1.Sum(publicKey)
 	peerAddr := conn.RemoteAddr().(*net.TCPAddr)
 	_, err = host.store.Insert(

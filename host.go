@@ -1,8 +1,11 @@
 package coalition
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net"
 )
@@ -89,6 +92,87 @@ func (host *Host) Listen() {
 func (host *Host) Close() {
 	host.closed = true
 	host.listener.Close()
+}
+
+// Send a message to the node at the full qualified ipv4:port address
+func (host *Host) SendMessage(
+	address string,
+	version int,
+	method string,
+	data interface{},
+) (interface{}, error) {
+	// Dial node
+	conn, err := net.Dial("tcp4", address)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	// Prepare serialized request
+	serializedRequest, err := json.Marshal(&RPCRequest{
+		version,
+		method,
+		data,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the peer signature for the serialized request
+	hash := sha256.Sum256(serializedRequest)
+	signature := make([]byte, 0)
+	signature = append(signature, host.PublicKey()...)
+	signature = append(signature, host.Sign(hash[:])...)
+
+	// Send the full request payload
+	requestPayload := make([]byte, 0)
+	requestPayload = append(requestPayload, signature...)
+	requestPayload = append(requestPayload, serializedRequest...)
+	requestPayload = append(requestPayload, '\n')
+	if _, err = conn.Write(requestPayload); err != nil {
+		return nil, err
+	}
+
+	// Read response payload
+	responsePayload, err := bufio.NewReader(conn).ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	} else if len(responsePayload) < PeerSignatureSize {
+		return nil, fmt.Errorf("Unable to read signature from response payload")
+	}
+
+	// Parse the peer signature and response from the response payload
+	peerSignature := responsePayload[:PeerSignatureSize]
+	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
+
+	// Verify the peer signature
+	hash = sha256.Sum256(peerResponse)
+	publicKey := peerSignature[:ed25519.PublicKeySize]
+	ecSignature := peerSignature[ed25519.PublicKeySize:]
+	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
+		return nil, fmt.Errorf("Invalid peer signature")
+	}
+
+	// Parse the peer information and update the host's peer store
+	peerKey := sha1.Sum(publicKey)
+	peerAddr := conn.RemoteAddr().(*net.TCPAddr)
+	_, err = host.store.Insert(
+		peerKey[:],
+		peerAddr.IP.To4().String(),
+		peerAddr.Port,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the RPC response from the payload
+	var response RPCResponse
+	if err = json.Unmarshal(peerResponse, &response); err != nil {
+		return nil, err
+	} else if !response.Success {
+		return nil, fmt.Errorf(response.Data.(string))
+	}
+	return response.Data, nil
 }
 
 // Create a new P2P host on the specified ipv4 port with the Ed25519 private key
