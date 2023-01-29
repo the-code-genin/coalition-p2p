@@ -56,11 +56,11 @@ func (peer *Peer) Distance(key []byte) (*big.Int, error) {
 
 // The peer store manages a kbucket of network peers
 type PeerStore struct {
-	locusKey   []byte
-	maxPeers   int64
-	pingPeriod int64
-	peers      []*Peer
-	kbucket    map[string][][]byte
+	locusKey      []byte
+	maxPeers      int64
+	latencyPeriod int64
+	peers         []*Peer
+	kbucket       map[string][][]byte
 }
 
 // Do a merge sort on two Peer arrays
@@ -301,7 +301,7 @@ func (store *PeerStore) Insert(
 	// If the least recently seen peer hasn't been seen in over ping period seconds replace it
 	store.SortPeersByLastSeen()
 	leastSeenPeer := store.peers[len(store.peers)-1]
-	if time.Now().Unix()-leastSeenPeer.lastSeen > store.pingPeriod {
+	if time.Now().Unix()-leastSeenPeer.lastSeen > store.latencyPeriod {
 		if err := store.Remove(leastSeenPeer.key); err != nil {
 			return false, err
 		}
@@ -329,23 +329,23 @@ func (store *PeerStore) Peers() []*Peer {
 }
 
 // locusKey: the host node's peer key
-// maxPeers: must be >= 1
-// pingPeriod: <= 0 means that new peers will always be inserted into the store
+// maxPeers: the kbucket replication parameter
+// latencyPeriod: grace period in seconds before the node is considered offline
 func NewPeerStore(
 	locusKey []byte,
 	maxPeers int64,
-	pingPeriod int64,
+	latencyPeriod int64,
 ) (*PeerStore, error) {
 	if maxPeers < 1 {
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
 
 	store := &PeerStore{
-		locusKey:   locusKey,
-		maxPeers:   maxPeers,
-		pingPeriod: pingPeriod,
-		peers:      make([]*Peer, 0),
-		kbucket:    make(map[string][][]byte),
+		locusKey:      locusKey,
+		maxPeers:      maxPeers,
+		latencyPeriod: latencyPeriod,
+		peers:         make([]*Peer, 0),
+		kbucket:       make(map[string][][]byte),
 	}
 	return store, nil
 }
