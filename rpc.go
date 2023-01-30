@@ -42,16 +42,12 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		if err != nil {
 			return
 		}
-
-		// Prepare the peer signature for the serialized response
 		hash := sha256.Sum256(serializedResponse)
-		signature := make([]byte, 0)
-		signature = append(signature, host.PublicKey()...)
-		signature = append(signature, host.Sign(hash[:])...)
 
 		// Send the full response payload
 		payload := make([]byte, 0)
-		payload = append(payload, signature...)
+		payload = append(payload, host.PublicKey()...)
+		payload = append(payload, host.Sign(hash[:])...)
 		payload = append(payload, serializedResponse...)
 		payload = append(payload, '\n')
 		conn.Write(payload)
@@ -68,13 +64,12 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	}
 
 	// Parse the peer signature and request from the payload
-	peerSignature := payload[:PeerSignatureSize]
+	publicKey := payload[:ed25519.PublicKeySize]
+	ecSignature := payload[ed25519.PublicKeySize:PeerSignatureSize]
 	peerRequest := payload[PeerSignatureSize : len(payload)-1]
 
 	// Verify the peer signature
 	hash := sha256.Sum256(peerRequest)
-	publicKey := peerSignature[:ed25519.PublicKeySize]
-	ecSignature := peerSignature[ed25519.PublicKeySize:]
 	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
 		response.Data = "Invalid peer signature"
 		return

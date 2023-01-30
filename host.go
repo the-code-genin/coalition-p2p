@@ -117,16 +117,12 @@ func (host *Host) SendMessage(
 	if err != nil {
 		return nil, err
 	}
-
-	// Prepare the peer signature for the serialized request
 	hash := sha256.Sum256(serializedRequest)
-	signature := make([]byte, 0)
-	signature = append(signature, host.PublicKey()...)
-	signature = append(signature, host.Sign(hash[:])...)
 
 	// Send the full request payload
 	requestPayload := make([]byte, 0)
-	requestPayload = append(requestPayload, signature...)
+	requestPayload = append(requestPayload, host.PublicKey()...)
+	requestPayload = append(requestPayload, host.Sign(hash[:])...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
 	if _, err := conn.Write(requestPayload); err != nil {
@@ -142,13 +138,12 @@ func (host *Host) SendMessage(
 	}
 
 	// Parse the peer signature and response from the response payload
-	peerSignature := responsePayload[:PeerSignatureSize]
+	publicKey := responsePayload[:ed25519.PublicKeySize]
+	ecSignature := responsePayload[ed25519.PublicKeySize:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
 
 	// Verify the peer signature
 	hash = sha256.Sum256(peerResponse)
-	publicKey := peerSignature[:ed25519.PublicKeySize]
-	ecSignature := peerSignature[ed25519.PublicKeySize:]
 	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
 		return nil, fmt.Errorf("invalid peer signature")
 	}
