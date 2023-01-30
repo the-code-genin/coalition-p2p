@@ -58,8 +58,8 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	if err != nil {
 		response.Data = err.Error()
 		return
-	} else if len(payload) < PeerSignatureSize {
-		response.Data = "Unable to read signature from request payload"
+	} else if len(payload) < PeerSignatureSize+1 {
+		response.Data = "Incomplete request body"
 		return
 	}
 

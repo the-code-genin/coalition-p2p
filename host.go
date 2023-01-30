@@ -125,16 +125,18 @@ func (host *Host) SendMessage(
 	requestPayload = append(requestPayload, host.Sign(hash[:])...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
-	if _, err := conn.Write(requestPayload); err != nil {
+	if written, err := conn.Write(requestPayload); err != nil {
 		return nil, err
+	} else if written != len(requestPayload) {
+		return nil, fmt.Errorf("unable to write the entire request to the connection")
 	}
 
 	// Read response payload
 	responsePayload, err := bufio.NewReader(conn).ReadBytes('\n')
 	if err != nil {
 		return nil, err
-	} else if len(responsePayload) < PeerSignatureSize {
-		return nil, fmt.Errorf("unable to read signature from response payload")
+	} else if len(responsePayload) < PeerSignatureSize+1 {
+		return nil, fmt.Errorf("incomplete response body")
 	}
 
 	// Parse the peer signature and response from the response payload
