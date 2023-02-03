@@ -26,3 +26,5 @@ const DefaultPingPeriod = int64(time.Minute * 5)
 
 const LatencyPeriodOption = "latency_period"
 const DefaultLatencyPeriod = int64(time.Hour)
+
+const FindNodeMethod = "find_node"
