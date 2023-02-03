@@ -28,3 +28,5 @@ const LatencyPeriodOption = "latency_period"
 const DefaultLatencyPeriod = int64(time.Hour)
 
 const FindNodeMethod = "find_node"
+const StoreProviderMethod = "store_provider"
+const FindProviderMethod = "find_provider"
