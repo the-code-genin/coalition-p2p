@@ -13,11 +13,14 @@ import (
 )
 
 func main() {
+	if len(os.Args) != 2 {
+		log.Fatalf("Remote node address must be specified as the argument")
+	}
+
 	_, privKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		panic(err)
 	}
-
 	host, err := coalition.NewHost(
 		3001,
 		privKey,
@@ -42,23 +45,12 @@ func main() {
 	}
 	defer host.Close()
 
-	if len(os.Args) < 2 {
-		log.Fatalf("Node address must be specified")
-	}
-
-	remoteAddress := os.Args[1]
-	_, ip4Address, port, err := coalition.ParseNodeAddress(remoteAddress)
-	if err != nil {
-		panic(err)
-	}
-
-	response, err := host.SendMessage(fmt.Sprintf("%s:%d", ip4Address, port), 1, "ping", nil)
-	if err != nil {
-		panic(err)
-	}
-
 	peerKey := host.PeerKey()
 	fmt.Printf("Sending ping from %s\n", hex.EncodeToString(peerKey[:]))
+	response, err := host.SendMessage(os.Args[1], 1, "ping", nil)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(response.(string))
 	fmt.Printf("Peers: %d\n", len(host.Peers()))
 }

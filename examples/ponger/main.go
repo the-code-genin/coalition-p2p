@@ -15,10 +15,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	port := 3000
 	host, err := coalition.NewHost(
-		port,
+		3000,
 		privKey,
 		coalition.RPCHandlerFuncMap{
 			"ping": func(
@@ -45,7 +43,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	fmt.Printf("Node address [%s]\n", address)
 	host.Listen()
 }
