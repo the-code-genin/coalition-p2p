@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"testing"
-	"time"
 )
 
 func TestNewHost(t *testing.T) {
@@ -20,12 +19,7 @@ func TestNewHost(t *testing.T) {
 	port := 3000
 	host, err := NewHost(
 		port,
-		privKey,
-		RPCHandlerFuncMap{},
-		20,                                 // Max peers
-		3,                                  // Max concurrent requests
-		int64(time.Hour.Seconds()),         // LatencyPeriod
-		int64((time.Minute * 5).Seconds()), // PingPeriod
+		Identity(privKey),
 	)
 	if err != nil {
 		t.Error(err)
@@ -50,24 +44,8 @@ func TestNewHost(t *testing.T) {
 
 func TestConnection(t *testing.T) {
 	// Create hostA listening on port 3000
-	_, privKeyA, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
 	portA := 3002
-	hostA, err := NewHost(
-		portA,
-		privKeyA,
-		RPCHandlerFuncMap{
-			"ping": func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
-				return "pong", nil
-			},
-		},
-		20,                                 // Max peers
-		3,                                  // Max concurrent requests
-		int64(time.Hour.Seconds()),         // LatencyPeriod
-		int64((time.Minute * 5).Seconds()), // PingPeriod
-	)
+	hostA, err := NewHost(portA)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,24 +53,8 @@ func TestConnection(t *testing.T) {
 	defer hostA.Close()
 
 	// Create hostB listening on port 3001
-	_, privKeyB, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
 	portB := 3003
-	hostB, err := NewHost(
-		portB,
-		privKeyB,
-		RPCHandlerFuncMap{
-			"ping": func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
-				return "pong", nil
-			},
-		},
-		20,                                 // Max peers
-		3,                                  // Max concurrent requests
-		int64(time.Hour.Seconds()),         // LatencyPeriod
-		int64((time.Minute * 5).Seconds()), // PingPeriod
-	)
+	hostB, err := NewHost(portB)
 	if err != nil {
 		t.Error(err)
 	}

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"testing"
-	"time"
 )
 
 func TestRPCServer(t *testing.T) {
@@ -23,16 +22,7 @@ func TestRPCServer(t *testing.T) {
 	// Create a new host on port 3000
 	host, err := NewHost(
 		3001, // Port
-		hostPrivKey,
-		RPCHandlerFuncMap{
-			"ping": func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
-				return "pong", nil
-			},
-		},
-		20,                                 // Max peers
-		3,                                  // Max concurrent requests
-		int64(time.Hour.Seconds()),         // LatencyPeriod
-		int64((time.Minute * 5).Seconds()), // PingPeriod
+		Identity(hostPrivKey),
 	)
 	if err != nil {
 		t.Error(err)

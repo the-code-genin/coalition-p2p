@@ -1,43 +1,32 @@
 package main
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/the-code-genin/coalition-p2p"
 )
 
 func main() {
-	_, privKey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	host, err := coalition.NewHost(
-		3000,
-		privKey,
-		coalition.RPCHandlerFuncMap{
-			"ping": func(
-				h *coalition.Host,
-				peerKey [coalition.PeerKeySize]byte,
-				req coalition.RPCRequest,
-			) (interface{}, error) {
-				fmt.Printf("Received ping from %s\n", hex.EncodeToString(peerKey[:]))
-				fmt.Printf("Peers: %d\n", len(h.Peers()))
-				return "pong", nil
-			},
-		},
-		20,                                 // Max peers
-		3,                                  // Max concurrent requests
-		int64(time.Hour.Seconds()),         // LatencyPeriod
-		int64((time.Minute * 5).Seconds()), // PingPeriod
-	)
+	host, err := coalition.NewHost(3000)
 	if err != nil {
 		panic(err)
 	}
 	defer host.Close()
+
+	// Override the "ping" method
+	host.RegisterRPCMethod(
+		"ping",
+		func(
+			h *coalition.Host,
+			peerKey [coalition.PeerKeySize]byte,
+			req coalition.RPCRequest,
+		) (interface{}, error) {
+			fmt.Printf("Received ping from %s\n", hex.EncodeToString(peerKey[:]))
+			fmt.Printf("Peers: %d\n", len(h.Peers()))
+			return "pong", nil
+		},
+	)
 
 	address, err := host.Address()
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/json"
@@ -178,29 +179,41 @@ func (host *Host) SendMessage(
 	return response.Data, nil
 }
 
+// Registers a new RPC method or overrites an existing method
+func (host *Host) RegisterRPCMethod(
+	methodName string,
+	handler RPCHandlerFunc,
+) {
+	host.rpcHandlers[methodName] = handler
+}
+
 // Close the host and any associated resources
 func (host *Host) Close() {
 	host.closed = true
 	host.listener.Close()
 }
 
-// Create a new P2P host on the specified ip4 port with the Ed25519 private key
-// port: TCP port to listen for RPC requests
-// key: ed25519 private key to sign messages
-// rpcHandlers: RPC request handlers
-// maxPeers: The kbucket replication paramter
-// concurrentRequests: The kademlia concurrent requests paramter
-// latencyPeriod: The amount of time in seconds to check if a node is still online
-// pingPeriod: The ping period in seconds to check if nodes are alive, should be < latencyPeriod
+// Create a new P2P host on the specified ip4 port
+// Options can be passed to configure the node
 func NewHost(
 	port int,
-	key ed25519.PrivateKey,
-	rpcHandlers RPCHandlerFuncMap,
-	maxPeers int64,
-	concurrentRequests int64,
-	latencyPeriod int64,
-	pingPeriod int64,
+	options ...Option,
 ) (*Host, error) {
+	// Parse the peer key
+	key, ok := getOption(PrivateKeyOption, options, nil).(ed25519.PrivateKey)
+	if !ok {
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		key = privKey
+	}
+
+	// Parse the kademlia parameters
+	maxPeers := getOption(MaxPeersOption, options, DefaultMaxPeers).(int64)
+	concurrentRequests := getOption(ConcurrentRequestsOption, options, DefaultConcurrentRequests).(int64)
+	pingPeriod := getOption(PingPeriodOption, options, DefaultPingPeriod).(int64)
+	latencyPeriod := getOption(LatencyPeriodOption, options, DefaultLatencyPeriod).(int64)
 	if pingPeriod >= latencyPeriod {
 		return nil, fmt.Errorf("ping period should be less than latency period")
 	} else if concurrentRequests < 1 {
@@ -210,7 +223,8 @@ func NewHost(
 	}
 
 	// Create a peer store
-	store, err := NewPeerStore(nil, maxPeers, latencyPeriod)
+	peerKey := sha1.Sum([]byte(key.Public().(ed25519.PublicKey)))
+	store, err := NewPeerStore(peerKey[:], maxPeers, latencyPeriod)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +236,7 @@ func NewHost(
 	}
 
 	// Create a new host
+	rpcHandlers := make(RPCHandlerFuncMap)
 	host := &Host{
 		listener,
 		store,
@@ -233,8 +248,14 @@ func NewHost(
 		pingPeriod,
 		latencyPeriod,
 	}
-	peerKey := host.PeerKey()
-	store.locusKey = peerKey[:]
+
+	// Register the ping RPC method
+	host.RegisterRPCMethod(
+		"ping",
+		func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
+			return "pong", nil
+		},
+	)
 
 	return host, nil
 }
