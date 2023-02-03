@@ -32,7 +32,7 @@ func (peer *Peer) Port() int {
 	return peer.port
 }
 
-// Return the fully qualified peer address
+// Return the peer address
 func (peer *Peer) Address() string {
 	return fmt.Sprintf("%s:%d", peer.ipAddress, peer.port)
 }
@@ -40,18 +40,6 @@ func (peer *Peer) Address() string {
 // Return the peer's last seen timestamp
 func (peer *Peer) LastSeen() int64 {
 	return peer.lastSeen
-}
-
-// Return the peer's XOR distance from a key
-func (peer *Peer) Distance(key []byte) (*big.Int, error) {
-	if len(key) != len(peer.key) {
-		return nil, fmt.Errorf("peer key length miss-match")
-	}
-	distance := new(big.Int).Xor(
-		new(big.Int).SetBytes(peer.key),
-		new(big.Int).SetBytes(key),
-	)
-	return distance, nil
 }
 
 // The peer store manages a kbucket of network peers
@@ -148,35 +136,38 @@ func (store *PeerStore) calculateKBucketKey(key []byte) (string, error) {
 
 // Sort the PeerStore from recently seen to least recently seen peer
 func (store *PeerStore) SortPeersByLastSeen() []*Peer {
-	store.peers = store.mergeSortPeers(
+	peers := store.mergeSortPeers(
 		store.peers,
 		make([]*Peer, 0),
 		func(peerA, peerB *Peer) int {
 			return int(peerB.lastSeen - peerA.lastSeen)
 		},
 	)
-	return store.peers
+	return peers
 }
 
 // Sort the PeerStore by proximity to a certain key
 // From closest to farthest
-func (store *PeerStore) SortPeersByProximity(key []byte) []*Peer {
-	store.peers = store.mergeSortPeers(
+func (store *PeerStore) SortPeersByProximity(key []byte) ([]*Peer, error) {
+	if len(key) != len(store.locusKey) {
+		return nil, fmt.Errorf("key length miss-match")
+	}
+	peers := store.mergeSortPeers(
 		store.peers,
 		make([]*Peer, 0),
 		func(peerA, peerB *Peer) int {
-			distanceA, err := peerA.Distance(key)
-			if err != nil {
-				return math.MaxInt
-			}
-			distanceB, err := peerB.Distance(key)
-			if err != nil {
-				return math.MaxInt
-			}
+			distanceA := new(big.Int).Xor(
+				new(big.Int).SetBytes(peerA.key),
+				new(big.Int).SetBytes(key),
+			)
+			distanceB := new(big.Int).Xor(
+				new(big.Int).SetBytes(peerB.key),
+				new(big.Int).SetBytes(key),
+			)
 			return int(new(big.Int).Sub(distanceB, distanceA).Int64())
 		},
 	)
-	return store.peers
+	return peers, nil
 }
 
 // Remove a peer
@@ -232,9 +223,9 @@ func (store *PeerStore) Remove(key []byte) error {
 	return nil
 }
 
-// Insert/update a peer
-// If the peer already exists in the store, it's last seen is updated
-// Returns true if peer updated/inserted
+// Insert/update a peer. If the peer already exists in the store, it's last seen is updated.
+// A peer will not be inserted if it does not meet the kbucket insertion rules.
+// Returns true if peer updated/inserted successfully.
 func (store *PeerStore) Insert(
 	key []byte,
 	ipAddress string,
@@ -302,8 +293,8 @@ func (store *PeerStore) Insert(
 	}
 
 	// If the least recently seen peer hasn't been seen in over ping period seconds replace it
-	store.SortPeersByLastSeen()
-	leastSeenPeer := store.peers[len(store.peers)-1]
+	peers := store.SortPeersByLastSeen()
+	leastSeenPeer := peers[len(peers)-1]
 	if time.Now().Unix()-leastSeenPeer.lastSeen > store.latencyPeriod {
 		if err := store.Remove(leastSeenPeer.key); err != nil {
 			return false, err
