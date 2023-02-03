@@ -42,6 +42,16 @@ func (peer *Peer) LastSeen() int64 {
 	return peer.lastSeen
 }
 
+// Create a new peer from the peer details
+func NewPeer(key []byte, ipAddress string, port int) *Peer {
+	return &Peer{
+		key,
+		ipAddress,
+		port,
+		time.Now().Unix(),
+	}
+}
+
 // The peer store manages a kbucket of network peers
 type PeerStore struct {
 	locusKey      []byte
@@ -249,7 +259,7 @@ func (store *PeerStore) Insert(
 
 	// Create new peer and calculate it's bucket key
 	// Create the bucket entry if it does not exist yet
-	peer := &Peer{key, ipAddress, port, time.Now().Unix()}
+	peer := NewPeer(key, ipAddress, port)
 	bucketKey, err := store.calculateKBucketKey(peer.key)
 	if err != nil {
 		return false, err
