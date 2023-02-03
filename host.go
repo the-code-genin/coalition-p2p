@@ -230,7 +230,7 @@ func NewHost(
 	}
 
 	// Start listening on the tcp port
-	listener, err := net.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
+	listener, err := net.Listen("tcp4", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return nil, err
 	}
