@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -20,8 +19,11 @@ func main() {
 	}
 	defer host.Close()
 
-	peerKey := host.PeerKey()
-	fmt.Printf("Sending ping from %s\n", hex.EncodeToString(peerKey[:]))
+	address, err := host.Address()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Sending ping from [%s]\n", address)
 	response, err := host.SendMessage(os.Args[1], 1, coalition.PingMethod, nil)
 	if err != nil {
 		panic(err)
