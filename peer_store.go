@@ -124,11 +124,14 @@ func (store *PeerStore) mergeSortPeers(
 }
 
 // Calculate the KBucket key for a peer as an hex value
-func (store *PeerStore) calculateKBucketKey(peer *Peer) (string, error) {
-	distanceFromLocus, err := peer.Distance(store.locusKey)
-	if err != nil {
-		return "", err
+func (store *PeerStore) calculateKBucketKey(key []byte) (string, error) {
+	if len(key) != len(store.locusKey) {
+		return "", fmt.Errorf("key length miss-match")
 	}
+	distanceFromLocus := new(big.Int).Xor(
+		new(big.Int).SetBytes(store.locusKey),
+		new(big.Int).SetBytes(key),
+	)
 	noBits := len(store.locusKey) * 8
 	for i := int64(noBits - 1); i >= 0; i-- {
 		key := new(big.Int).Exp(
@@ -192,7 +195,7 @@ func (store *PeerStore) Remove(key []byte) error {
 
 	// Calculate the peer kbucket key
 	peer := store.peers[peerIndex]
-	bucketKey, err := store.calculateKBucketKey(peer)
+	bucketKey, err := store.calculateKBucketKey(peer.key)
 	if err != nil {
 		return err
 	}
@@ -256,7 +259,7 @@ func (store *PeerStore) Insert(
 	// Create new peer and calculate it's bucket key
 	// Create the bucket entry if it does not exist yet
 	peer := &Peer{key, ipAddress, port, time.Now().Unix()}
-	bucketKey, err := store.calculateKBucketKey(peer)
+	bucketKey, err := store.calculateKBucketKey(peer.key)
 	if err != nil {
 		return false, err
 	}
