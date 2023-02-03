@@ -41,6 +41,11 @@ func main() {
 	}
 	defer host.Close()
 
-	fmt.Printf("Listening on port [:%d]\n", port)
+	address, err := host.Address()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Node address [%s]\n", address)
 	host.Listen()
 }
