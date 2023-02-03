@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/the-code-genin/coalition-p2p"
@@ -40,8 +42,17 @@ func main() {
 	}
 	defer host.Close()
 
-	remotePort := 3000
-	response, err := host.SendMessage(fmt.Sprintf("0.0.0.0:%d", remotePort), 1, "ping", nil)
+	if len(os.Args) < 2 {
+		log.Fatalf("Node address must be specified")
+	}
+
+	remoteAddress := os.Args[1]
+	_, ip4Address, port, err := coalition.ParseNodeAddress(remoteAddress)
+	if err != nil {
+		panic(err)
+	}
+
+	response, err := host.SendMessage(fmt.Sprintf("%s:%d", ip4Address, port), 1, "ping", nil)
 	if err != nil {
 		panic(err)
 	}
