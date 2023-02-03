@@ -54,7 +54,7 @@ func TestRPCServer(t *testing.T) {
 	// Prepare serialized ping request
 	serializedRequest, err := json.Marshal(&RPCRequest{
 		Version: 1,
-		Method:  "ping",
+		Method:  PingMethod,
 		Data:    nil,
 	})
 	if err != nil {
@@ -101,7 +101,7 @@ func TestRPCServer(t *testing.T) {
 		t.Error(err)
 	} else if !response.Success {
 		t.Error(response.Data.(string))
-	} else if response.Data.(string) != "pong" {
+	} else if response.Data.(string) != PingResponse {
 		t.Error("expected pong response from host")
 	}
 }

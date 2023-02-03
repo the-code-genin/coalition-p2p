@@ -251,9 +251,9 @@ func NewHost(
 
 	// Register the ping RPC method
 	host.RegisterRPCMethod(
-		"ping",
+		PingMethod,
 		func(*Host, [PeerKeySize]byte, RPCRequest) (interface{}, error) {
-			return "pong", nil
+			return PingResponse, nil
 		},
 	)
 

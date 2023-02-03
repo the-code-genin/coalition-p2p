@@ -22,7 +22,7 @@ func main() {
 
 	peerKey := host.PeerKey()
 	fmt.Printf("Sending ping from %s\n", hex.EncodeToString(peerKey[:]))
-	response, err := host.SendMessage(os.Args[1], 1, "ping", nil)
+	response, err := host.SendMessage(os.Args[1], 1, coalition.PingMethod, nil)
 	if err != nil {
 		panic(err)
 	}

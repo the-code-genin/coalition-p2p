@@ -16,7 +16,7 @@ func main() {
 
 	// Override the "ping" method
 	host.RegisterRPCMethod(
-		"ping",
+		coalition.PingMethod,
 		func(
 			h *coalition.Host,
 			peerKey [coalition.PeerKeySize]byte,
@@ -24,7 +24,7 @@ func main() {
 		) (interface{}, error) {
 			fmt.Printf("Received ping from %s\n", hex.EncodeToString(peerKey[:]))
 			fmt.Printf("Peers: %d\n", len(h.Peers()))
-			return "pong", nil
+			return coalition.PingResponse, nil
 		},
 	)
 

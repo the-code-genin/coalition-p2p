@@ -20,6 +20,8 @@ const ConcurrentRequestsOption = "concurrent_requests"
 const DefaultConcurrentRequests = int64(3)
 
 const PingPeriodOption = "ping_period"
+const PingMethod = "ping"
+const PingResponse = "pong"
 const DefaultPingPeriod = int64(time.Minute * 5)
 
 const LatencyPeriodOption = "latency_period"

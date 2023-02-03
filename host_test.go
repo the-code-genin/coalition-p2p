@@ -71,7 +71,7 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = hostB.SendMessage(address, 1, "ping", nil)
+	_, err = hostB.SendMessage(address, 1, PingMethod, nil)
 	if err != nil {
 		t.Error(err)
 	}
