@@ -13,7 +13,7 @@ func main() {
 		log.Fatalf("Remote node address must be specified as the argument")
 	}
 
-	host, err := coalition.NewHost(3001)
+	host, err := coalition.NewHost(3002)
 	if err != nil {
 		panic(err)
 	}
@@ -23,10 +23,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Sending [ping] from [%s]\n", address)
-	response, err := host.SendMessage(os.Args[1], 1, coalition.PingMethod, nil)
+	fmt.Printf("Sending [find_node] from [%s]\n", address)
+	response, err := host.SendMessage(os.Args[1], 1, coalition.FindNodeMethod, host.PeerKey())
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.(string))
+	fmt.Println(response.([]string))
 }
