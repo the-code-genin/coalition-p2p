@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"net"
+	"time"
 )
 
 type RPCRequest struct {
@@ -22,7 +23,7 @@ type RPCResponse struct {
 
 type RPCHandlerFunc func(
 	*Host,
-	[PeerKeySize]byte,
+	*Peer,
 	RPCRequest,
 ) (interface{}, error)
 
@@ -103,9 +104,15 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	}
 
 	// Handle the RPC request
+	peer := &Peer{
+		peerKey[:],
+		peerAddr.IP.To4().String(),
+		peerAddr.Port,
+		int64(time.Now().Unix()),
+	}
 	response.Data, err = handler(
 		host,
-		peerKey,
+		peer,
 		request,
 	)
 	if err != nil {

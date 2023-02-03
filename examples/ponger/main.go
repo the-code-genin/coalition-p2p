@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/the-code-genin/coalition-p2p"
@@ -19,11 +18,11 @@ func main() {
 		coalition.PingMethod,
 		func(
 			h *coalition.Host,
-			peerKey [coalition.PeerKeySize]byte,
+			peer *coalition.Peer,
 			req coalition.RPCRequest,
 		) (interface{}, error) {
-			fmt.Printf("Received ping from %s\n", hex.EncodeToString(peerKey[:]))
-			fmt.Printf("Peers: %d\n", len(h.Peers()))
+			fmt.Printf("Received ping from [%s]\n", peer.Address())
+			fmt.Printf("Peers [%d]\n", len(h.Peers()))
 			return coalition.PingResponse, nil
 		},
 	)
