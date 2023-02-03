@@ -34,7 +34,7 @@ func (host *Host) PeerKey() [PeerKeySize]byte {
 	return sha1.Sum([]byte(pk))
 }
 
-// Return the listening IPv4 address
+// Return the listening ip4 address
 func (host *Host) IPAddress() (string, error) {
 	tcpAddr, ok := host.listener.Addr().(*net.TCPAddr)
 	if !ok {
@@ -54,7 +54,7 @@ func (host *Host) Port() (int, error) {
 
 // Return the host's peer address
 func (host *Host) Address() (string, error) {
-	address, err := host.IPAddress()
+	ipAddress, err := host.IPAddress()
 	if err != nil {
 		return "", nil
 	}
@@ -64,7 +64,8 @@ func (host *Host) Address() (string, error) {
 		return "", nil
 	}
 
-	return fmt.Sprintf("%s:%d", address, port), nil
+	key := host.PeerKey()
+	return FormatNodeAddress(key[:], ipAddress, port), nil
 }
 
 // Sign a digest with the host's private key
@@ -88,7 +89,7 @@ func (host *Host) Listen() {
 	}
 }
 
-// Send a message to the node at the full qualified ipv4:port address
+// Send a message to the node at the full qualified ip4:port address
 func (host *Host) SendMessage(
 	address string,
 	version int,
@@ -172,7 +173,7 @@ func (host *Host) Close() {
 	host.listener.Close()
 }
 
-// Create a new P2P host on the specified ipv4 port with the Ed25519 private key
+// Create a new P2P host on the specified ip4 port with the Ed25519 private key
 // port: TCP port to listen for RPC requests
 // key: ed25519 private key to sign messages
 // rpcHandlers: RPC request handlers

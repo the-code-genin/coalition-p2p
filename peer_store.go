@@ -22,7 +22,7 @@ func (peer *Peer) Key() []byte {
 	return peer.key
 }
 
-// Return the peer IPv4 Address
+// Return the peer ip4 Address
 func (peer *Peer) IPAddress() string {
 	return peer.ipAddress
 }
@@ -34,7 +34,7 @@ func (peer *Peer) Port() int {
 
 // Return the peer address
 func (peer *Peer) Address() string {
-	return fmt.Sprintf("%s:%d", peer.ipAddress, peer.port)
+	return FormatNodeAddress(peer.key, peer.ipAddress, peer.port)
 }
 
 // Return the peer's last seen timestamp
