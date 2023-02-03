@@ -2,6 +2,7 @@ package coalition
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -89,15 +90,21 @@ func (host *Host) Listen() {
 	}
 }
 
-// Send a message to the node at the full qualified ip4:port address
+// Send a message to the node at the address
 func (host *Host) SendMessage(
 	address string,
 	version int,
 	method string,
 	data interface{},
 ) (interface{}, error) {
+	// Parse the node address
+	remotePeerKey, remoteIP4Address, remotePort, err := ParseNodeAddress(address)
+	if err != nil {
+		panic(err)
+	}
+
 	// Dial node
-	conn, err := net.Dial("tcp4", address)
+	conn, err := net.Dial("tcp4", fmt.Sprintf("%s:%d", remoteIP4Address, remotePort))
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +127,9 @@ func (host *Host) SendMessage(
 	requestPayload = append(requestPayload, host.Sign(hash[:])...)
 	requestPayload = append(requestPayload, serializedRequest...)
 	requestPayload = append(requestPayload, '\n')
-	if written, err := conn.Write(requestPayload); err != nil {
+	if i, err := conn.Write(requestPayload); err != nil {
 		return nil, err
-	} else if written != len(requestPayload) {
+	} else if i != len(requestPayload) {
 		return nil, fmt.Errorf("unable to write the entire request to the connection")
 	}
 
@@ -139,19 +146,23 @@ func (host *Host) SendMessage(
 	ecSignature := responsePayload[ed25519.PublicKeySize:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
 
+	// Verify the peer key
+	peerKey := sha1.Sum(publicKey)
+	if !bytes.Equal(peerKey[:], remotePeerKey) {
+		return nil, fmt.Errorf("peer key in address does not match peer key in response")
+	}
+
 	// Verify the peer signature
 	hash = sha256.Sum256(peerResponse)
 	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
 		return nil, fmt.Errorf("invalid peer signature")
 	}
 
-	// Parse the peer information and update the host's peer store
-	peerKey := sha1.Sum(publicKey)
-	peerAddr := conn.RemoteAddr().(*net.TCPAddr)
+	// Update the host's peer store
 	_, err = host.store.Insert(
-		peerKey[:],
-		peerAddr.IP.To4().String(),
-		peerAddr.Port,
+		remotePeerKey,
+		remoteIP4Address,
+		remotePort,
 	)
 	if err != nil {
 		return nil, err
