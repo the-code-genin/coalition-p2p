@@ -5,7 +5,6 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha1"
-	"fmt"
 	"testing"
 	"time"
 )
@@ -110,11 +109,7 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, ip4Address, port, err := ParseNodeAddress(address)
-	if err != nil {
-		t.Error(err)
-	}
-	_, err = hostB.SendMessage(fmt.Sprintf("%s:%d", ip4Address, port), 1, "ping", nil)
+	_, err = hostB.SendMessage(address, 1, "ping", nil)
 	if err != nil {
 		t.Error(err)
 	}
