@@ -6,6 +6,8 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/json"
+	"io"
+	"math/big"
 	"net"
 	"time"
 )
@@ -45,17 +47,32 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		}
 		hash := sha256.Sum256(serializedResponse)
 
-		// Send the full response payload
+		// Prepare the full response payload
 		payload := make([]byte, 0)
 		payload = append(payload, host.PublicKey()...)
 		payload = append(payload, host.Sign(hash[:])...)
 		payload = append(payload, serializedResponse...)
-		payload = append(payload, '\n')
+
+		// Return the response
+		payloadSizeBuffer := make([]byte, 8)
+		big.NewInt(int64(len(payload))).FillBytes(payloadSizeBuffer)
+		conn.Write(payloadSizeBuffer)
 		conn.Write(payload)
 	}()
 
+	// Parse the size of the request payload in bytes
+	requestReader := bufio.NewReader(conn)
+	payloadSizeBuffer := make([]byte, 8)
+	_, err := io.ReadFull(requestReader, payloadSizeBuffer)
+	if err != nil {
+		response.Data = err.Error()
+		return
+	}
+	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
+
 	// Read the payload from the connection
-	payload, err := bufio.NewReader(conn).ReadBytes('\n')
+	payload := make([]byte, payloadSize)
+	_, err = io.ReadFull(requestReader, payload)
 	if err != nil {
 		response.Data = err.Error()
 		return
@@ -67,7 +84,7 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	// Parse the peer signature and request from the payload
 	publicKey := payload[:ed25519.PublicKeySize]
 	ecSignature := payload[ed25519.PublicKeySize:PeerSignatureSize]
-	peerRequest := payload[PeerSignatureSize : len(payload)-1]
+	peerRequest := payload[PeerSignatureSize:]
 
 	// Verify the peer signature
 	hash := sha256.Sum256(peerRequest)

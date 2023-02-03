@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
 	"net"
 )
 
@@ -123,20 +125,34 @@ func (host *Host) SendMessage(
 	}
 	hash := sha256.Sum256(serializedRequest)
 
-	// Send the full request payload
+	// Prepare the full request payload
 	requestPayload := make([]byte, 0)
 	requestPayload = append(requestPayload, host.PublicKey()...)
 	requestPayload = append(requestPayload, host.Sign(hash[:])...)
 	requestPayload = append(requestPayload, serializedRequest...)
-	requestPayload = append(requestPayload, '\n')
-	if i, err := conn.Write(requestPayload); err != nil {
+
+	// Send the request
+	payloadSizeBuffer := make([]byte, 8)
+	big.NewInt(int64(len(requestPayload))).FillBytes(payloadSizeBuffer)
+	if _, err := conn.Write(payloadSizeBuffer); err != nil {
 		return nil, err
-	} else if i != len(requestPayload) {
-		return nil, fmt.Errorf("unable to write the entire request to the connection")
+	}
+	if _, err := conn.Write(requestPayload); err != nil {
+		return nil, err
 	}
 
+	// Parse the size of the response payload in bytes
+	responseReader := bufio.NewReader(conn)
+	payloadSizeBuffer = make([]byte, 8)
+	_, err = io.ReadFull(responseReader, payloadSizeBuffer)
+	if err != nil {
+		return nil, err
+	}
+	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
+
 	// Read response payload
-	responsePayload, err := bufio.NewReader(conn).ReadBytes('\n')
+	responsePayload := make([]byte, payloadSize)
+	_, err = io.ReadFull(responseReader, responsePayload)
 	if err != nil {
 		return nil, err
 	} else if len(responsePayload) < PeerSignatureSize+1 {
@@ -146,7 +162,7 @@ func (host *Host) SendMessage(
 	// Parse the peer signature and response from the response payload
 	publicKey := responsePayload[:ed25519.PublicKeySize]
 	ecSignature := responsePayload[ed25519.PublicKeySize:PeerSignatureSize]
-	peerResponse := responsePayload[PeerSignatureSize : len(responsePayload)-1]
+	peerResponse := responsePayload[PeerSignatureSize:]
 
 	// Verify the peer key
 	peerKey := sha1.Sum(publicKey)
