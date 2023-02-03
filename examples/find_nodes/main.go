@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -24,9 +25,15 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Sending [find_node] from [%s]\n", address)
-	response, err := host.SendMessage(os.Args[1], 1, coalition.FindNodeMethod, host.PeerKey())
+	peerKey := host.PeerKey()
+	response, err := host.SendMessage(
+		os.Args[1],
+		1,
+		coalition.FindNodeMethod,
+		hex.EncodeToString(peerKey[:]),
+	)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.([]string))
+	fmt.Println(response.([]interface{}))
 }
