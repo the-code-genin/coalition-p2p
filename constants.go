@@ -2,7 +2,7 @@ package coalition
 
 import "crypto/ed25519"
 
-// Size of peer ID in bytes
+// Size of peer key in bytes
 const PeerKeySize = 20
 
 // Size of peer payload signature in bytes

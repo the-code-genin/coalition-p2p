@@ -23,6 +23,17 @@ type Host struct {
 	latencyPeriod      int64
 }
 
+// Return the host's ed25519 public key
+func (host *Host) PublicKey() ed25519.PublicKey {
+	return host.key.Public().(ed25519.PublicKey)
+}
+
+// Returns the 160-bit sha1 hash of the host's public key as the host's peer key
+func (host *Host) PeerKey() [PeerKeySize]byte {
+	pk := host.key.Public().(ed25519.PublicKey)
+	return sha1.Sum([]byte(pk))
+}
+
 // Return the listening IPv4 address
 func (host *Host) IPAddress() (string, error) {
 	tcpAddr, ok := host.listener.Addr().(*net.TCPAddr)
@@ -41,7 +52,7 @@ func (host *Host) Port() (int, error) {
 	return tcpAddr.Port, nil
 }
 
-// Return the host's fully qualified tcp address i.e tcp ipv4:port
+// Return the host's peer address
 func (host *Host) Address() (string, error) {
 	address, err := host.IPAddress()
 	if err != nil {
@@ -56,20 +67,9 @@ func (host *Host) Address() (string, error) {
 	return fmt.Sprintf("%s:%d", address, port), nil
 }
 
-// Return the host ed25519 public key
-func (host *Host) PublicKey() ed25519.PublicKey {
-	return host.key.Public().(ed25519.PublicKey)
-}
-
-// Sign digest with the host key
+// Sign a digest with the host's private key
 func (host *Host) Sign(digest []byte) []byte {
 	return ed25519.Sign(host.key, digest)
-}
-
-// Returns the 160-bit hash of the public key as the peer ID
-func (host *Host) PeerKey() [PeerKeySize]byte {
-	pk := host.key.Public().(ed25519.PublicKey)
-	return sha1.Sum([]byte(pk))
 }
 
 // Returns the host's connected peers
@@ -86,12 +86,6 @@ func (host *Host) Listen() {
 		}
 		go HandleRPCConnection(host, conn)
 	}
-}
-
-// Close the host and any associated resources
-func (host *Host) Close() {
-	host.closed = true
-	host.listener.Close()
 }
 
 // Send a message to the node at the full qualified ipv4:port address
@@ -170,6 +164,12 @@ func (host *Host) SendMessage(
 		return nil, fmt.Errorf(response.Data.(string))
 	}
 	return response.Data, nil
+}
+
+// Close the host and any associated resources
+func (host *Host) Close() {
+	host.closed = true
+	host.listener.Close()
 }
 
 // Create a new P2P host on the specified ipv4 port with the Ed25519 private key
