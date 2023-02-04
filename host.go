@@ -199,9 +199,9 @@ func (host *Host) Ping(address string) error {
 	}
 	data, ok := response.(string)
 	if !ok {
-		return fmt.Errorf("expected %s as response", PingResponse)
+		return fmt.Errorf("expected [%s] as response", PingResponse)
 	} else if data != PingResponse {
-		return fmt.Errorf("expected %s as response", PingResponse)
+		return fmt.Errorf("expected [%s] as response", PingResponse)
 	}
 	return nil
 }
