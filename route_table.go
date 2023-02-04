@@ -190,7 +190,7 @@ func (table *RouteTable) SortPeersByProximity(key []byte) ([]*Peer, error) {
 				new(big.Int).SetBytes(peerB.key),
 				new(big.Int).SetBytes(key),
 			)
-			return int(new(big.Int).Sub(distanceB, distanceA).Int64())
+			return int(distanceB.Uint64() - distanceA.Uint64())
 		},
 	)
 	return peers, nil
