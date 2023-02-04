@@ -257,7 +257,12 @@ func (table *RouteTable) Insert(
 	ipAddress string,
 	port int,
 ) (bool, error) {
-	// If the peer is already in the store
+	// Skip inserts for the same node
+	if bytes.Equal(key, table.locusKey) {
+		return false, nil
+	}
+
+	// If the peer is already in the table
 	peerIndex := -1
 	for index, peer := range table.peers {
 		if bytes.Equal(peer.key, key) {
@@ -284,14 +289,14 @@ func (table *RouteTable) Insert(
 		table.kbucket[bucketKey] = make([][]byte, 0)
 	}
 
-	// If the store is not full, append the new entry
+	// If the table is not full, append the new entry
 	if len(table.peers) < int(table.maxPeers) {
 		table.peers = append(table.peers, peer)
 		table.kbucket[bucketKey] = append(table.kbucket[bucketKey], peer.key)
 		return true, nil
 	}
 
-	// If it's kbucket entry is empty but the store is full
+	// If it's kbucket entry is empty but the table is full
 	// Find a bloated entry to prune to make space for the new peer
 	if len(table.kbucket[bucketKey]) == 0 {
 		pruned := false
@@ -360,12 +365,12 @@ func NewRouteTable(
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
 
-	store := &RouteTable{
+	table := &RouteTable{
 		locusKey:      locusKey,
 		maxPeers:      maxPeers,
 		latencyPeriod: latencyPeriod,
 		peers:         make([]*Peer, 0),
 		kbucket:       make(map[string][][]byte),
 	}
-	return store, nil
+	return table, nil
 }
