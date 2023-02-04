@@ -27,8 +27,7 @@ func main() {
 		fmt.Printf("Node listening on [%s]\n", addrs[0])
 
 		// Connect previous host to this host
-		if len(hosts) > 0 {
-			prevHost := hosts[len(hosts)-1]
+		for _, prevHost := range hosts {
 			if err := prevHost.Ping(addrs[0]); err != nil {
 				panic(err)
 			}
