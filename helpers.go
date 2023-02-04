@@ -3,6 +3,7 @@ package coalition
 import (
 	"encoding/hex"
 	"fmt"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -87,4 +88,64 @@ func GetPublicIP4Addresses() ([]string, error) {
 		}
 	}
 	return res, nil
+}
+
+// Do a merge sort on two Peer arrays
+func MergeSortPeers(
+	bucketA, bucketB []*Peer,
+	sortFunc func(*Peer, *Peer) int,
+) []*Peer {
+	output := make([]*Peer, 0)
+
+	// Atomic sub array
+	if len(bucketA) == 0 && len(bucketB) == 0 {
+		return output
+	} else if len(bucketA) == 1 && len(bucketB) == 0 {
+		return bucketA
+	} else if len(bucketB) == 1 && len(bucketA) == 0 {
+		return bucketB
+	}
+
+	// Sort bucketA
+	midPointA := int(math.Ceil(float64(len(bucketA)) / 2))
+	sortedA := MergeSortPeers(bucketA[:midPointA], bucketA[midPointA:], sortFunc)
+
+	// Sort bucketB
+	midPointB := int(math.Ceil(float64(len(bucketB)) / 2))
+	sortedB := MergeSortPeers(bucketB[:midPointB], bucketB[midPointB:], sortFunc)
+
+	// Merge arrays
+	for i, j := 0, 0; i < len(sortedA) || j < len(sortedB); {
+		var peerA, peerB *Peer
+		if i < len(sortedA) {
+			peerA = sortedA[i]
+		}
+		if j < len(sortedB) {
+			peerB = sortedB[j]
+		}
+
+		// If either array has been exhausted
+		if peerA == nil {
+			output = append(output, peerB)
+			j++
+			continue
+		} else if peerB == nil {
+			output = append(output, peerA)
+			i++
+			continue
+		}
+
+		// Compare the Peers
+		if res := sortFunc(peerA, peerB); res >= 0 {
+			// PeerB is greater than or equal to peerA
+			output = append(output, peerA)
+			i++
+		} else {
+			// PeerA is greater than peerB
+			output = append(output, peerB)
+			j++
+		}
+	}
+
+	return output
 }
