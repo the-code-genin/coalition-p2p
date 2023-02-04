@@ -52,6 +52,21 @@ func NewPeer(key []byte, ipAddress string, port int) *Peer {
 	}
 }
 
+// Create a new peer from a peer address
+func NewPeerFromAddress(address string) (*Peer, error) {
+	key, ip4Address, port, err := ParseNodeAddress(address)
+	if err != nil {
+		return nil, err
+	}
+	peer := &Peer{
+		key,
+		ip4Address,
+		port,
+		time.Now().Unix(),
+	}
+	return peer, nil
+}
+
 // The peer store manages a kbucket of network peers
 type PeerStore struct {
 	locusKey      []byte
