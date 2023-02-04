@@ -61,12 +61,14 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+
+				mutex.Lock()
+				defer mutex.Unlock()
+
 				if len(newRes) >= maxPeers {
 					return
 				}
 
-				mutex.Lock()
-				defer mutex.Unlock()
 				for _, responseAddr := range responseAddrs {
 					peer, err := coalition.NewPeerFromAddress(responseAddr)
 					if err != nil {
