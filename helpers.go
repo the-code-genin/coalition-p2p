@@ -53,3 +53,38 @@ func ParseNodeAddress(address string) ([]byte, string, int, error) {
 
 	return key, ip4Address.String(), port, nil
 }
+
+// Get this computer's public ip4 addresses
+func GetPublicIP4Address() ([]string, error) {
+	infaces, err := net.Interfaces()
+	if err != nil {
+		return nil, nil
+	}
+
+	res := make([]string, 0)
+	for _, inface := range infaces {
+		addrs, err := inface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			default:
+				continue
+			}
+
+			ip4 := ip.To4()
+			if ip4 == nil {
+				continue
+			}
+			res = append(res, ip4.String())
+		}
+	}
+	return res, nil
+}
