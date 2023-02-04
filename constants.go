@@ -19,7 +19,7 @@ const DefaultMaxPeers = int64(160)
 
 // Kademlia concurrent requests parameter
 const ConcurrentRequestsOption = "concurrent_requests"
-const DefaultConcurrentRequests = int64(5)
+const DefaultConcurrentRequests = int64(10)
 
 // Ping RPC method
 const PingPeriodOption = "ping_period"
