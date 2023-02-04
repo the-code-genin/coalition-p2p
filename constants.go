@@ -15,11 +15,11 @@ const PrivateKeyOption = "private_key"
 
 // Kademlia replication parameter
 const MaxPeersOption = "max_peers"
-const DefaultMaxPeers = int64(160)
+const DefaultMaxPeers = int64(PeerKeySize * 8)
 
 // Kademlia concurrent requests parameter
 const ConcurrentRequestsOption = "concurrent_requests"
-const DefaultConcurrentRequests = int64(10)
+const DefaultConcurrentRequests = int64(float64(DefaultMaxPeers) * 0.1)
 
 // Ping RPC method
 const PingPeriodOption = "ping_period"
