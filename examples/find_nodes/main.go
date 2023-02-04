@@ -14,7 +14,7 @@ func main() {
 		log.Fatalf("Remote node address must be specified as the argument")
 	}
 
-	host, err := coalition.NewHost(3002)
+	host, err := coalition.NewHost(4000)
 	if err != nil {
 		panic(err)
 	}
