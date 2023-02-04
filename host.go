@@ -191,6 +191,21 @@ func (host *Host) SendMessage(
 	return response.Data, nil
 }
 
+// Send a ping to the host at the address
+func (host *Host) Ping(address string) error {
+	response, err := host.SendMessage(address, 1, PingMethod, nil)
+	if err != nil {
+		return err
+	}
+	data, ok := response.(string)
+	if !ok {
+		return fmt.Errorf("expected %s as response", PingResponse)
+	} else if data != PingResponse {
+		return fmt.Errorf("expected %s as response", PingResponse)
+	}
+	return nil
+}
+
 // Registers a new RPC method or overrites an existing method
 func (host *Host) RegisterRPCMethod(
 	methodName string,
@@ -242,7 +257,7 @@ func NewHost(
 	}
 
 	// Start listening on the tcp port
-	listener, err := net.Listen("tcp4", fmt.Sprintf("127.0.0.1:%d", port))
+	listener, err := net.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return nil, err
 	}
