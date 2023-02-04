@@ -44,10 +44,10 @@ func main() {
 	fmt.Printf("Boot node [%s]\n", bootNode)
 	fmt.Printf("Search key [%s]\n", hex.EncodeToString(searchKey))
 
-	concurrentReqs := 5
+	concurrentReqs := int(coalition.DefaultConcurrentRequests)
 	lookUpNodes := []string{bootNode}
 	var lookUpRes []*coalition.Peer
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		// Find closest set nodes to the key from the lookup nodes
 		lookUpRes = make([]*coalition.Peer, 0)
 		for i := 0; i < concurrentReqs && i < len(lookUpNodes); i++ {
