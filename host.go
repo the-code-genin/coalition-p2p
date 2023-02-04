@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -276,38 +275,9 @@ func NewHost(
 		latencyPeriod,
 	}
 
-	// Register the ping RPC method with returns a pong response
-	host.RegisterRPCMethod(
-		PingMethod,
-		func(*Host, *Peer, RPCRequest) (interface{}, error) {
-			return PingResponse, nil
-		},
-	)
-
-	// Register the find_node RPC method which finds nodes near a key
-	// The nodes are sorted from closest to farthest from the key
-	host.RegisterRPCMethod(
-		FindNodeMethod,
-		func(host *Host, _ *Peer, req RPCRequest) (interface{}, error) {
-			keyHex, ok := req.Data.(string)
-			if !ok {
-				return nil, fmt.Errorf("node key not found in request body")
-			}
-			key, err := hex.DecodeString(keyHex)
-			if err != nil {
-				return nil, err
-			}
-			peers, err := host.table.SortPeersByProximity(key)
-			if err != nil {
-				return nil, err
-			}
-			addrs := make([]string, 0)
-			for _, peer := range peers {
-				addrs = append(addrs, peer.Address())
-			}
-			return addrs, nil
-		},
-	)
+	// Register standard RPC methods
+	host.RegisterRPCMethod(PingMethod, PingHandler)
+	host.RegisterRPCMethod(FindNodeMethod, FindNodeHandler)
 
 	return host, nil
 }
