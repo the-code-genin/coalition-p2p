@@ -61,6 +61,9 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				if len(newRes) >= maxPeers {
+					return
+				}
 
 				mutex.Lock()
 				defer mutex.Unlock()
