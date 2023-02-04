@@ -19,11 +19,11 @@ func main() {
 	}
 	defer host.Close()
 
-	address, err := host.Address()
+	addrs, err := host.Addresses()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Sending [ping] from [%s]\n", address)
+	fmt.Printf("Sending [ping] from [%s]\n", addrs[0])
 	response, err := host.SendMessage(os.Args[1], 1, coalition.PingMethod, nil)
 	if err != nil {
 		panic(err)

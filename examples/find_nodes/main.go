@@ -20,11 +20,11 @@ func main() {
 	}
 	defer host.Close()
 
-	address, err := host.Address()
+	addrs, err := host.Addresses()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Sending [find_node] from [%s]\n", address)
+	fmt.Printf("Sending [find_node] from [%s]\n", addrs[0])
 	peerKey := host.PeerKey()
 	response, err := host.SendMessage(
 		os.Args[1],

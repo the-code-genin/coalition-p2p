@@ -35,17 +35,7 @@ func (host *Host) PublicKey() ed25519.PublicKey {
 
 // Returns the 160-bit sha1 hash of the host's public key as the host's peer key
 func (host *Host) PeerKey() [PeerKeySize]byte {
-	pk := host.key.Public().(ed25519.PublicKey)
-	return sha1.Sum([]byte(pk))
-}
-
-// Return the listening ip4 address
-func (host *Host) IPAddress() (string, error) {
-	tcpAddr, ok := host.listener.Addr().(*net.TCPAddr)
-	if !ok {
-		return "", fmt.Errorf("unable to parse host port")
-	}
-	return tcpAddr.IP.To4().String(), nil
+	return sha1.Sum([]byte(host.PublicKey()))
 }
 
 // Return the listening tcp port
@@ -57,20 +47,25 @@ func (host *Host) Port() (int, error) {
 	return tcpAddr.Port, nil
 }
 
-// Return the host's peer address
-func (host *Host) Address() (string, error) {
-	ipAddress, err := host.IPAddress()
+// Return the host's peer addresses
+func (host *Host) Addresses() ([]string, error) {
+	addrs, err := GetPublicIP4Addresses()
 	if err != nil {
-		return "", nil
+		return nil, nil
 	}
 
 	port, err := host.Port()
 	if err != nil {
-		return "", nil
+		return nil, nil
 	}
 
 	key := host.PeerKey()
-	return FormatNodeAddress(key[:], ipAddress, port), nil
+
+	res := make([]string, 0)
+	for _, addr := range addrs {
+		res = append(res, FormatNodeAddress(key[:], addr, port))
+	}
+	return res, nil
 }
 
 // Sign a digest with the host's private key

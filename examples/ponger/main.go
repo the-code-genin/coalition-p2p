@@ -27,10 +27,12 @@ func main() {
 		},
 	)
 
-	address, err := host.Address()
+	addrs, err := host.Addresses()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Node address [%s]\n", address)
+	for _, addr := range addrs {
+		fmt.Printf("Node address [%s]\n", addr)
+	}
 	host.Listen()
 }

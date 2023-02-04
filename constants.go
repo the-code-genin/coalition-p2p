@@ -13,12 +13,15 @@ const PeerSignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
 
 const PrivateKeyOption = "private_key"
 
+// Kademlia replication parameter
 const MaxPeersOption = "max_peers"
 const DefaultMaxPeers = int64(20)
 
+// Kademlia concurrent requests parameter
 const ConcurrentRequestsOption = "concurrent_requests"
 const DefaultConcurrentRequests = int64(3)
 
+// Ping RPC method
 const PingPeriodOption = "ping_period"
 const PingMethod = "ping"
 const PingResponse = "pong"

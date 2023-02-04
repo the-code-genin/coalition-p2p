@@ -55,7 +55,7 @@ func ParseNodeAddress(address string) ([]byte, string, int, error) {
 }
 
 // Get this computer's public ip4 addresses
-func GetPublicIP4Address() ([]string, error) {
+func GetPublicIP4Addresses() ([]string, error) {
 	infaces, err := net.Interfaces()
 	if err != nil {
 		return nil, nil

@@ -67,11 +67,11 @@ func TestConnection(t *testing.T) {
 	}
 
 	// Send a ping message to hostA from hostB
-	address, err := hostA.Address()
+	addrs, err := hostA.Addresses()
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = hostB.SendMessage(address, 1, PingMethod, nil)
+	_, err = hostB.SendMessage(addrs[0], 1, PingMethod, nil)
 	if err != nil {
 		t.Error(err)
 	}

@@ -33,11 +33,11 @@ func TestRPCServer(t *testing.T) {
 	go host.Listen()
 
 	// Dial host
-	address, err := host.Address()
+	addrs, err := host.Addresses()
 	if err != nil {
 		t.Error(err)
 	}
-	_, ip4Address, port, err := ParseNodeAddress(address)
+	_, ip4Address, port, err := ParseNodeAddress(addrs[0])
 	if err != nil {
 		t.Error(err)
 	}
