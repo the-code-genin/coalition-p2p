@@ -22,7 +22,7 @@ func main() {
 			req coalition.RPCRequest,
 		) (interface{}, error) {
 			fmt.Printf("Received ping from [%s]\n", peer.Address())
-			fmt.Printf("Peers [%d]\n", len(h.Peers()))
+			fmt.Printf("Peers [%d]\n", len(h.RouteTable().Peers()))
 			return coalition.PingResponse, nil
 		},
 	)

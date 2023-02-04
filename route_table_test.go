@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-func TestPeerStorage(t *testing.T) {
+func TestRouteTableInsert(t *testing.T) {
 	locusKey := make([]byte, PeerKeySize)
 	if _, err := rand.Read(locusKey); err != nil {
 		t.Error(err)
 	}
 	maxPeers := int64(20)
 	pingPeriod := int64(time.Hour.Seconds())
-	store, err := NewPeerStore(locusKey, maxPeers, pingPeriod)
+	store, err := NewRouteTable(locusKey, maxPeers, pingPeriod)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,14 +40,14 @@ func TestPeerStorage(t *testing.T) {
 	}
 }
 
-func TestPeerStoreExpiry(t *testing.T) {
+func TestRouteTableExpiry(t *testing.T) {
 	locusKey := make([]byte, PeerKeySize)
 	if _, err := rand.Read(locusKey); err != nil {
 		t.Error(err)
 	}
 	maxPeers := int64(20)
 	pingPeriod := int64(-1)
-	store, err := NewPeerStore(locusKey, maxPeers, pingPeriod)
+	store, err := NewRouteTable(locusKey, maxPeers, pingPeriod)
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,14 +69,14 @@ func TestPeerStoreExpiry(t *testing.T) {
 	}
 }
 
-func TestPeerStoreRemove(t *testing.T) {
+func TestRouteTableRemove(t *testing.T) {
 	locusKey := make([]byte, PeerKeySize)
 	if _, err := rand.Read(locusKey); err != nil {
 		t.Error(err)
 	}
 	maxPeers := int64(20)
 	pingPeriod := int64(time.Hour.Seconds())
-	store, err := NewPeerStore(locusKey, maxPeers, pingPeriod)
+	store, err := NewRouteTable(locusKey, maxPeers, pingPeriod)
 	if err != nil {
 		t.Error(err)
 	}

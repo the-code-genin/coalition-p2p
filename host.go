@@ -18,7 +18,7 @@ import (
 // Represents a basic p2p node with an optimized kbucket peer store
 type Host struct {
 	listener           net.Listener
-	store              *PeerStore
+	table              *RouteTable
 	key                ed25519.PrivateKey
 	rpcHandlers        RPCHandlerFuncMap
 	closed             bool
@@ -73,9 +73,9 @@ func (host *Host) Sign(digest []byte) []byte {
 	return ed25519.Sign(host.key, digest)
 }
 
-// Returns the host's connected peers
-func (host *Host) Peers() []*Peer {
-	return host.store.Peers()
+// Returns the host's route table
+func (host *Host) RouteTable() *RouteTable {
+	return host.table
 }
 
 // Start listening for connections on the specified port for RPC requests
@@ -171,8 +171,8 @@ func (host *Host) SendMessage(
 		return nil, fmt.Errorf("invalid peer signature")
 	}
 
-	// Update the host's peer store
-	_, err = host.store.Insert(
+	// Update the host's route table
+	_, err = host.table.Insert(
 		remotePeerKey,
 		remoteIP4Address,
 		remotePort,
@@ -236,7 +236,7 @@ func NewHost(
 
 	// Create a peer store
 	peerKey := sha1.Sum([]byte(key.Public().(ed25519.PublicKey)))
-	store, err := NewPeerStore(peerKey[:], maxPeers, latencyPeriod)
+	table, err := NewRouteTable(peerKey[:], maxPeers, latencyPeriod)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func NewHost(
 	rpcHandlers := make(RPCHandlerFuncMap)
 	host := &Host{
 		listener,
-		store,
+		table,
 		key,
 		rpcHandlers,
 		false,
@@ -282,7 +282,7 @@ func NewHost(
 			if err != nil {
 				return nil, err
 			}
-			peers, err := host.store.SortPeersByProximity(key)
+			peers, err := host.table.SortPeersByProximity(key)
 			if err != nil {
 				return nil, err
 			}

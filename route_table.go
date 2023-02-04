@@ -67,8 +67,8 @@ func NewPeerFromAddress(address string) (*Peer, error) {
 	return peer, nil
 }
 
-// The peer store manages a kbucket of network peers
-type PeerStore struct {
+// The route table manages an optimized kbucket of network peers
+type RouteTable struct {
 	locusKey      []byte
 	maxPeers      int64
 	latencyPeriod int64
@@ -77,7 +77,7 @@ type PeerStore struct {
 }
 
 // Do a merge sort on two Peer arrays
-func (store *PeerStore) mergeSortPeers(
+func (table *RouteTable) mergeSortPeers(
 	bucketA, bucketB []*Peer,
 	sortFunc func(*Peer, *Peer) int,
 ) []*Peer {
@@ -94,11 +94,11 @@ func (store *PeerStore) mergeSortPeers(
 
 	// Sort bucketA
 	midPointA := int(math.Ceil(float64(len(bucketA)) / 2))
-	sortedA := store.mergeSortPeers(bucketA[:midPointA], bucketA[midPointA:], sortFunc)
+	sortedA := table.mergeSortPeers(bucketA[:midPointA], bucketA[midPointA:], sortFunc)
 
 	// Sort bucketB
 	midPointB := int(math.Ceil(float64(len(bucketB)) / 2))
-	sortedB := store.mergeSortPeers(bucketB[:midPointB], bucketB[midPointB:], sortFunc)
+	sortedB := table.mergeSortPeers(bucketB[:midPointB], bucketB[midPointB:], sortFunc)
 
 	// Merge arrays
 	for i, j := 0, 0; i < len(sortedA) || j < len(sortedB); {
@@ -137,15 +137,15 @@ func (store *PeerStore) mergeSortPeers(
 }
 
 // Calculate the KBucket key for a peer as an hex value
-func (store *PeerStore) calculateKBucketKey(key []byte) (string, error) {
-	if len(key) != len(store.locusKey) {
+func (table *RouteTable) calculateKBucketKey(key []byte) (string, error) {
+	if len(key) != len(table.locusKey) {
 		return "", fmt.Errorf("key length miss-match")
 	}
 	distanceFromLocus := new(big.Int).Xor(
-		new(big.Int).SetBytes(store.locusKey),
+		new(big.Int).SetBytes(table.locusKey),
 		new(big.Int).SetBytes(key),
 	)
-	noBits := len(store.locusKey) * 8
+	noBits := len(table.locusKey) * 8
 	for i := int64(noBits - 1); i >= 0; i-- {
 		key := new(big.Int).Exp(
 			new(big.Int).SetInt64(2),
@@ -159,10 +159,11 @@ func (store *PeerStore) calculateKBucketKey(key []byte) (string, error) {
 	return hex.EncodeToString([]byte{0}), nil
 }
 
-// Sort the PeerStore from recently seen to least recently seen peer
-func (store *PeerStore) SortPeersByLastSeen() []*Peer {
-	peers := store.mergeSortPeers(
-		store.peers,
+// Sort the peers in the route table
+// From recently seen to least recently seen peer
+func (table *RouteTable) SortPeersByLastSeen() []*Peer {
+	peers := table.mergeSortPeers(
+		table.peers,
 		make([]*Peer, 0),
 		func(peerA, peerB *Peer) int {
 			return int(peerB.lastSeen - peerA.lastSeen)
@@ -171,14 +172,14 @@ func (store *PeerStore) SortPeersByLastSeen() []*Peer {
 	return peers
 }
 
-// Sort the PeerStore by proximity to a certain key
+// Sort the peers in the route table by proximity to a certain key
 // From closest to farthest
-func (store *PeerStore) SortPeersByProximity(key []byte) ([]*Peer, error) {
-	if len(key) != len(store.locusKey) {
+func (table *RouteTable) SortPeersByProximity(key []byte) ([]*Peer, error) {
+	if len(key) != len(table.locusKey) {
 		return nil, fmt.Errorf("key length miss-match")
 	}
-	peers := store.mergeSortPeers(
-		store.peers,
+	peers := table.mergeSortPeers(
+		table.peers,
 		make([]*Peer, 0),
 		func(peerA, peerB *Peer) int {
 			distanceA := new(big.Int).Xor(
@@ -195,11 +196,11 @@ func (store *PeerStore) SortPeersByProximity(key []byte) ([]*Peer, error) {
 	return peers, nil
 }
 
-// Remove a peer
-func (store *PeerStore) Remove(key []byte) error {
+// Remove a peer from the route table
+func (table *RouteTable) Remove(key []byte) error {
 	// Get the peer index in the peer list
 	peerIndex := -1
-	for index, peer := range store.peers {
+	for index, peer := range table.peers {
 		if bytes.Equal(peer.key, key) {
 			peerIndex = index
 			break
@@ -210,18 +211,18 @@ func (store *PeerStore) Remove(key []byte) error {
 	}
 
 	// Calculate the peer kbucket key
-	peer := store.peers[peerIndex]
-	bucketKey, err := store.calculateKBucketKey(peer.key)
+	peer := table.peers[peerIndex]
+	bucketKey, err := table.calculateKBucketKey(peer.key)
 	if err != nil {
 		return err
 	}
-	if _, exists := store.kbucket[bucketKey]; !exists {
+	if _, exists := table.kbucket[bucketKey]; !exists {
 		return fmt.Errorf("kbucket entry does not exist for peer")
 	}
 
 	// Calculate the peer key index in the kbucket entry
 	peerKeyIndex := -1
-	for index, peerKey := range store.kbucket[bucketKey] {
+	for index, peerKey := range table.kbucket[bucketKey] {
 		if bytes.Equal(peer.key, peerKey) {
 			peerKeyIndex = index
 			break
@@ -232,40 +233,40 @@ func (store *PeerStore) Remove(key []byte) error {
 	}
 
 	// Splice the peer key from the kbucket entry
-	keysA := store.kbucket[bucketKey][:peerKeyIndex]
-	keysB := store.kbucket[bucketKey][peerKeyIndex+1:]
-	store.kbucket[bucketKey] = make([][]byte, 0)
-	store.kbucket[bucketKey] = append(store.kbucket[bucketKey], keysA...)
-	store.kbucket[bucketKey] = append(store.kbucket[bucketKey], keysB...)
+	keysA := table.kbucket[bucketKey][:peerKeyIndex]
+	keysB := table.kbucket[bucketKey][peerKeyIndex+1:]
+	table.kbucket[bucketKey] = make([][]byte, 0)
+	table.kbucket[bucketKey] = append(table.kbucket[bucketKey], keysA...)
+	table.kbucket[bucketKey] = append(table.kbucket[bucketKey], keysB...)
 
 	// Splice the peer to be removed from the peer list
-	peersA := store.peers[:peerIndex]
-	peersB := store.peers[peerIndex+1:]
-	store.peers = make([]*Peer, 0)
-	store.peers = append(store.peers, peersA...)
-	store.peers = append(store.peers, peersB...)
+	peersA := table.peers[:peerIndex]
+	peersB := table.peers[peerIndex+1:]
+	table.peers = make([]*Peer, 0)
+	table.peers = append(table.peers, peersA...)
+	table.peers = append(table.peers, peersB...)
 
 	return nil
 }
 
-// Insert/update a peer. If the peer already exists in the store, it's last seen is updated.
+// Insert/update a peer. If the peer already exists in the table, it's last seen is updated.
 // A peer will not be inserted if it does not meet the kbucket insertion rules.
 // Returns true if peer updated/inserted successfully.
-func (store *PeerStore) Insert(
+func (table *RouteTable) Insert(
 	key []byte,
 	ipAddress string,
 	port int,
 ) (bool, error) {
 	// If the peer is already in the store
 	peerIndex := -1
-	for index, peer := range store.peers {
+	for index, peer := range table.peers {
 		if bytes.Equal(peer.key, key) {
 			peerIndex = index
 			break
 		}
 	}
 	if peerIndex != -1 {
-		peer := store.peers[peerIndex]
+		peer := table.peers[peerIndex]
 		peer.ipAddress = ipAddress
 		peer.port = port
 		peer.lastSeen = time.Now().Unix()
@@ -275,26 +276,26 @@ func (store *PeerStore) Insert(
 	// Create new peer and calculate it's bucket key
 	// Create the bucket entry if it does not exist yet
 	peer := NewPeer(key, ipAddress, port)
-	bucketKey, err := store.calculateKBucketKey(peer.key)
+	bucketKey, err := table.calculateKBucketKey(peer.key)
 	if err != nil {
 		return false, err
 	}
-	if _, exists := store.kbucket[bucketKey]; !exists {
-		store.kbucket[bucketKey] = make([][]byte, 0)
+	if _, exists := table.kbucket[bucketKey]; !exists {
+		table.kbucket[bucketKey] = make([][]byte, 0)
 	}
 
 	// If the store is not full, append the new entry
-	if len(store.peers) < int(store.maxPeers) {
-		store.peers = append(store.peers, peer)
-		store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+	if len(table.peers) < int(table.maxPeers) {
+		table.peers = append(table.peers, peer)
+		table.kbucket[bucketKey] = append(table.kbucket[bucketKey], peer.key)
 		return true, nil
 	}
 
 	// If it's kbucket entry is empty but the store is full
 	// Find a bloated entry to prune to make space for the new peer
-	if len(store.kbucket[bucketKey]) == 0 {
+	if len(table.kbucket[bucketKey]) == 0 {
 		pruned := false
-		for _, entries := range store.kbucket {
+		for _, entries := range table.kbucket {
 			// Not a bloated entry
 			if len(entries) <= 1 {
 				continue
@@ -302,7 +303,7 @@ func (store *PeerStore) Insert(
 
 			// Remove the last peer in the entry
 			entryPeerKey := entries[len(entries)-1]
-			if err := store.Remove(entryPeerKey); err != nil {
+			if err := table.Remove(entryPeerKey); err != nil {
 				return false, err
 			}
 			pruned = true
@@ -311,21 +312,21 @@ func (store *PeerStore) Insert(
 
 		// If a bloat node was pruned
 		if pruned {
-			store.peers = append(store.peers, peer)
-			store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+			table.peers = append(table.peers, peer)
+			table.kbucket[bucketKey] = append(table.kbucket[bucketKey], peer.key)
 			return true, nil
 		}
 	}
 
 	// If the least recently seen peer hasn't been seen in over ping period seconds replace it
-	peers := store.SortPeersByLastSeen()
+	peers := table.SortPeersByLastSeen()
 	leastSeenPeer := peers[len(peers)-1]
-	if time.Now().Unix()-leastSeenPeer.lastSeen > store.latencyPeriod {
-		if err := store.Remove(leastSeenPeer.key); err != nil {
+	if time.Now().Unix()-leastSeenPeer.lastSeen > table.latencyPeriod {
+		if err := table.Remove(leastSeenPeer.key); err != nil {
 			return false, err
 		}
-		store.peers = append(store.peers, peer)
-		store.kbucket[bucketKey] = append(store.kbucket[bucketKey], peer.key)
+		table.peers = append(table.peers, peer)
+		table.kbucket[bucketKey] = append(table.kbucket[bucketKey], peer.key)
 		return true, nil
 	}
 
@@ -333,8 +334,8 @@ func (store *PeerStore) Insert(
 }
 
 // Gets a peer by it's key if it exists
-func (store *PeerStore) Get(key []byte) *Peer {
-	for _, peer := range store.peers {
+func (table *RouteTable) Get(key []byte) *Peer {
+	for _, peer := range table.peers {
 		if bytes.Equal(peer.key, key) {
 			return peer
 		}
@@ -343,23 +344,23 @@ func (store *PeerStore) Get(key []byte) *Peer {
 }
 
 // Get a the list of stored peers
-func (store *PeerStore) Peers() []*Peer {
-	return store.peers
+func (table *RouteTable) Peers() []*Peer {
+	return table.peers
 }
 
 // locusKey: the host node's peer key
 // maxPeers: the kbucket replication parameter
 // latencyPeriod: grace period in seconds before the node is considered offline
-func NewPeerStore(
+func NewRouteTable(
 	locusKey []byte,
 	maxPeers int64,
 	latencyPeriod int64,
-) (*PeerStore, error) {
+) (*RouteTable, error) {
 	if maxPeers < 1 {
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
 
-	store := &PeerStore{
+	store := &RouteTable{
 		locusKey:      locusKey,
 		maxPeers:      maxPeers,
 		latencyPeriod: latencyPeriod,

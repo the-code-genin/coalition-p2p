@@ -60,9 +60,9 @@ func TestConnection(t *testing.T) {
 	}
 	defer hostB.Close()
 
-	if len(hostA.Peers()) != 0 {
+	if len(hostA.RouteTable().Peers()) != 0 {
 		t.Errorf("Host A should not have any peers")
-	} else if len(hostB.Peers()) != 0 {
+	} else if len(hostB.RouteTable().Peers()) != 0 {
 		t.Errorf("Host B should not have any peers")
 	}
 
@@ -76,9 +76,9 @@ func TestConnection(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(hostA.Peers()) != 1 {
+	if len(hostA.RouteTable().Peers()) != 1 {
 		t.Errorf("Host A should have one peer")
-	} else if len(hostB.Peers()) != 1 {
+	} else if len(hostB.RouteTable().Peers()) != 1 {
 		t.Errorf("Host B should have one peer")
 	}
 }
