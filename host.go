@@ -48,7 +48,7 @@ func (host *Host) Port() (int, error) {
 
 // Return the host's peer addresses
 func (host *Host) Addresses() ([]string, error) {
-	addrs, err := GetPublicIP4Addresses()
+	ipAddrs, err := GetPublicIP4Addresses()
 	if err != nil {
 		return nil, nil
 	}
@@ -61,8 +61,12 @@ func (host *Host) Addresses() ([]string, error) {
 	key := host.PeerKey()
 
 	res := make([]string, 0)
-	for _, addr := range addrs {
-		res = append(res, FormatNodeAddress(key[:], addr, port))
+	for _, ipAddr := range ipAddrs {
+		nodeAddr, err := FormatNodeAddress(key[:], ipAddr, port)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, nodeAddr)
 	}
 	return res, nil
 }

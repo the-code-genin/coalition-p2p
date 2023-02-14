@@ -43,8 +43,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	bootnodeAddr, err := bootNode.Address()
+	if err != nil {
+		panic(err)
+	}
 	fmt.Printf("Sending [find_node] from [%s]\n", addrs[0])
-	fmt.Printf("Boot node [%s]\n", bootNode.Address())
+	fmt.Printf("Boot node [%s]\n", bootnodeAddr)
 	fmt.Printf("Search key [%s]\n", hex.EncodeToString(searchKey))
 
 	maxPeers := int(coalition.DefaultMaxPeers)
@@ -57,7 +61,11 @@ func main() {
 			wg.Add(1)
 			go func(lookupNode *coalition.Peer) {
 				defer wg.Done()
-				responseAddrs, err := host.FindNode(lookupNode.Address(), searchKey)
+				lookupNodeAddr, err := lookupNode.Address()
+				if err != nil {
+					panic(err)
+				}
+				responseAddrs, err := host.FindNode(lookupNodeAddr, searchKey)
 				if err != nil {
 					panic(err)
 				}
@@ -77,7 +85,11 @@ func main() {
 
 					// Found search key
 					if bytes.Equal(peer.Key(), searchKey) {
-						fmt.Printf("Found node at [%s]\n", peer.Address())
+						peerAddr, err := peer.Address()
+						if err != nil {
+							panic(err)
+						}
+						fmt.Printf("Found node at [%s]\n", peerAddr)
 						log.Fatalf("\n")
 					} else if bytes.Equal(peer.Key(), hostKey[:]) {
 						continue
@@ -141,8 +153,8 @@ func main() {
 
 		// Output
 		fmt.Printf("Got [%d] new closer peers from network\n", len(newRes))
-		for _, addr := range newRes {
-			fmt.Println(addr.Address())
+		for _, peer := range newRes {
+			fmt.Println(peer.Address())
 		}
 		fmt.Println()
 
@@ -152,8 +164,13 @@ func main() {
 		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
 		currentLookUpRes = make([]*coalition.Peer, 0)
 		for _, peer := range newRes {
+			peerAddr, err := peer.Address()
+			if err != nil {
+				panic(err)
+			}
+
 			// Check if alive
-			if err := host.Ping(peer.Address()); err != nil {
+			if err := host.Ping(peerAddr); err != nil {
 				continue
 			}
 			currentLookUpRes = append(currentLookUpRes, peer)

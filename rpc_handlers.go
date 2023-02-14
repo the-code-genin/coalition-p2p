@@ -27,7 +27,11 @@ func FindNodeHandler(host *Host, remotePeer *Peer, req RPCRequest) (interface{},
 	}
 	addrs := make([]string, 0)
 	for _, peer := range peers {
-		addrs = append(addrs, peer.Address())
+		peerAddr, err := peer.Address()
+		if err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, peerAddr)
 	}
 	return addrs, nil
 }

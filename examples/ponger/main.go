@@ -21,7 +21,12 @@ func main() {
 			peer *coalition.Peer,
 			req coalition.RPCRequest,
 		) (interface{}, error) {
-			fmt.Printf("Received ping from [%s]\n", peer.Address())
+			peerAddr, err := peer.Address()
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Printf("Received ping from [%s]\n", peerAddr)
 			fmt.Printf("Peers [%d]\n", len(h.RouteTable().Peers()))
 			return coalition.PingResponse, nil
 		},

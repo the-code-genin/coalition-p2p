@@ -32,7 +32,7 @@ func (peer *Peer) Port() int {
 }
 
 // Return the peer address
-func (peer *Peer) Address() string {
+func (peer *Peer) Address() (string, error) {
 	return FormatNodeAddress(peer.key, peer.ipAddress, peer.port)
 }
 

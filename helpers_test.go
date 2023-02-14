@@ -14,7 +14,11 @@ func TestNodeAddressParsing(t *testing.T) {
 	ip4 := "0.0.0.0"
 	port := 3000
 
-	nodeAddress := FormatNodeAddress(key, ip4, port)
+	nodeAddress, err := FormatNodeAddress(key, ip4, port)
+	if err != nil {
+		t.Error(err)
+	}
+
 	parsedKey, parsedIP4, parsedPort, err := ParseNodeAddress(nodeAddress)
 	if err != nil {
 		t.Error(err)

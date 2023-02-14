@@ -10,13 +10,27 @@ import (
 )
 
 // Format the node details into a node address
-func FormatNodeAddress(key []byte, ip4Address string, port int) string {
-	return fmt.Sprintf(
+func FormatNodeAddress(key []byte, addr string, port int) (string, error) {
+	if len(key) != PeerKeySize {
+		return "", fmt.Errorf("invalid peer key size")
+	}
+
+	ipAddress := net.ParseIP(addr)
+	if ipAddress == nil {
+		return "", fmt.Errorf("invalid ip adddress")
+	}
+	ip4Address := ipAddress.To4()
+	if ip4Address == nil {
+		return "", fmt.Errorf("invalid ip4 address")
+	}
+
+	nodeAddr := fmt.Sprintf(
 		"node://%s@%s:%d",
 		hex.EncodeToString(key),
-		ip4Address,
+		ip4Address.String(),
 		port,
 	)
+	return nodeAddr, nil
 }
 
 // Parse a node address(node://) into (peer key, ip4Address, port)
