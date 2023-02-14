@@ -1,9 +1,12 @@
 package coalition
 
 import (
+	"bufio"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math"
+	"math/big"
 	"net"
 	"regexp"
 	"strconv"
@@ -164,4 +167,40 @@ func MergeSortPeers(
 	}
 
 	return output
+}
+
+// Writes a payload to the connection
+func WriteToConn(conn net.Conn, data []byte) error {
+	// Determine the size of the payload
+	buffer := make([]byte, 8)
+	big.NewInt(int64(len(data))).FillBytes(buffer)
+	if _, err := conn.Write(buffer); err != nil {
+		return err
+	}
+	if _, err := conn.Write(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Reads a payload from the connection
+func ReadFromConn(conn net.Conn) ([]byte, error) {
+	requestReader := bufio.NewReader(conn)
+
+	// Parse the size of the request payload in bytes
+	payloadSizeBuffer := make([]byte, 8)
+	_, err := io.ReadFull(requestReader, payloadSizeBuffer)
+	if err != nil {
+		return nil, err
+	}
+	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
+
+	// Read the payload from the connection
+	payload := make([]byte, payloadSize)
+	_, err = io.ReadFull(requestReader, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
 }

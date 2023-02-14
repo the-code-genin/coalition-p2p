@@ -1,7 +1,6 @@
 package coalition
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -9,8 +8,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
-	"math/big"
 	"net"
 )
 
@@ -71,9 +68,19 @@ func (host *Host) Addresses() ([]string, error) {
 	return res, nil
 }
 
-// Sign a digest with the host's private key
-func (host *Host) Sign(digest []byte) []byte {
-	return ed25519.Sign(host.key, digest)
+// Generate a peer signature from a digest by signing with the host's private key
+func (host *Host) Sign(digest []byte) ([PeerSignatureSize]byte, error) {
+	output := *new([PeerSignatureSize]byte)
+	payload := make([]byte, 0)
+	payload = append(payload, host.PublicKey()...)
+	payload = append(payload, ed25519.Sign(host.key, digest)...)
+	if len(payload) != PeerSignatureSize {
+		return output, fmt.Errorf("error occured while signing digest")
+	}
+	if i := copy(output[:], payload); i != PeerSignatureSize {
+		return output, fmt.Errorf("error occured while signing digest")
+	}
+	return output, nil
 }
 
 // Returns the host's route table
@@ -121,36 +128,26 @@ func (host *Host) SendMessage(
 	if err != nil {
 		return nil, err
 	}
+
+	// Prepare request signature
 	hash := sha256.Sum256(serializedRequest)
-
-	// Prepare the full request payload
-	requestPayload := make([]byte, 0)
-	requestPayload = append(requestPayload, host.PublicKey()...)
-	requestPayload = append(requestPayload, host.Sign(hash[:])...)
-	requestPayload = append(requestPayload, serializedRequest...)
-
-	// Send the request
-	payloadSizeBuffer := make([]byte, 8)
-	big.NewInt(int64(len(requestPayload))).FillBytes(payloadSizeBuffer)
-	if _, err := conn.Write(payloadSizeBuffer); err != nil {
-		return nil, err
-	}
-	if _, err := conn.Write(requestPayload); err != nil {
-		return nil, err
-	}
-
-	// Parse the size of the response payload in bytes
-	responseReader := bufio.NewReader(conn)
-	payloadSizeBuffer = make([]byte, 8)
-	_, err = io.ReadFull(responseReader, payloadSizeBuffer)
+	signature, err := host.Sign(hash[:])
 	if err != nil {
 		return nil, err
 	}
-	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
 
-	// Read response payload
-	responsePayload := make([]byte, payloadSize)
-	_, err = io.ReadFull(responseReader, responsePayload)
+	// Prepare the full request payload
+	requestPayload := make([]byte, 0)
+	requestPayload = append(requestPayload, signature[:]...)
+	requestPayload = append(requestPayload, serializedRequest...)
+
+	// Send the request
+	if err := WriteToConn(conn, requestPayload); err != nil {
+		return nil, err
+	}
+
+	// Read the payload from the connection
+	responsePayload, err := ReadFromConn(conn)
 	if err != nil {
 		return nil, err
 	} else if len(responsePayload) < PeerSignatureSize+1 {
