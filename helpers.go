@@ -50,6 +50,8 @@ func ParseNodeAddress(address string) ([]byte, string, int, error) {
 	key, err := hex.DecodeString(res[1])
 	if err != nil {
 		return nil, "", 0, err
+	} else if len(key) != PeerKeySize {
+		return nil, "", 0, fmt.Errorf("invalid peer key")
 	}
 
 	ipAddress := net.ParseIP(res[2])
