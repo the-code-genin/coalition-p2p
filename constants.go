@@ -2,11 +2,12 @@ package coalition
 
 import (
 	"crypto/ed25519"
+	"crypto/sha1"
 	"time"
 )
 
 // Size of peer key in bytes
-const PeerKeySize = 20
+const PeerKeySize = sha1.Size
 
 // Size of peer payload signature in bytes
 const PeerSignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
