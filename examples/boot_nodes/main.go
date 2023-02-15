@@ -12,7 +12,7 @@ var wg sync.WaitGroup
 func main() {
 	basePort := 3000
 	hosts := make([]*coalition.Host, 0)
-	for i := 0; i < int(coalition.DefaultMaxPeers * 4); i++ {
+	for i := 0; i < int(coalition.DefaultMaxPeers); i++ {
 		host, err := coalition.NewHost(basePort + i)
 		if err != nil {
 			panic(err)
@@ -26,11 +26,14 @@ func main() {
 		}
 		fmt.Printf("Node listening on [%s]\n", addrs[0])
 
-		// Connect previous host to this host
-		for _, prevHost := range hosts {
+		// Connect to last 10 hosts
+		added := 0
+		for i := len(hosts); i > 0 && added < 10; i-- {
+			prevHost := hosts[i - 1]
 			if err := prevHost.Ping(addrs[0]); err != nil {
 				panic(err)
 			}
+			added++
 		}
 
 		hosts = append(hosts, host)
