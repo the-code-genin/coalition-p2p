@@ -1,8 +1,6 @@
 package coalition
 
 import (
-	"crypto/ed25519"
-	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/json"
 	"net"
@@ -70,19 +68,18 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	}
 
 	// Parse the peer signature and request from the payload
-	publicKey := payload[:ed25519.PublicKeySize]
-	ecSignature := payload[ed25519.PublicKeySize:PeerSignatureSize]
+	peerSignature := payload[:PeerSignatureSize]
 	peerRequest := payload[PeerSignatureSize:]
 
 	// Verify the peer signature
 	hash := sha256.Sum256(peerRequest)
-	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
-		response.Data = "Invalid peer signature"
+	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, hash[:])
+	if err != nil {
+		response.Data = err.Error()
 		return
 	}
 
 	// Parse the peer information and update the host's peer store
-	peerKey := sha1.Sum(publicKey)
 	peerAddr := conn.RemoteAddr().(*net.TCPAddr)
 	_, err = host.RouteTable().Insert(
 		peerKey[:],

@@ -2,6 +2,8 @@ package coalition
 
 import (
 	"bufio"
+	"crypto/ed25519"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -203,4 +205,21 @@ func ReadFromConn(conn net.Conn) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+// Recovers the peer key from a peer signature
+func RecoverPeerKeyFromPeerSignature(signature, hash []byte) ([]byte, error) {
+	if len(signature) != PeerSignatureSize {
+		return nil, fmt.Errorf("invalid peer signature length")
+	}
+	publicKey := signature[:ed25519.PublicKeySize]
+	ecSignature := signature[ed25519.PublicKeySize:]
+
+	// Verify the peer signature
+	if !ed25519.Verify(publicKey, hash, ecSignature) {
+		return nil, fmt.Errorf("invalid peer signature")
+	}
+
+	peerKey := sha1.Sum(publicKey)
+	return peerKey[:], nil
 }

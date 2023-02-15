@@ -13,14 +13,14 @@ import (
 
 // Represents a basic p2p node with an optimized kbucket peer store
 type Host struct {
-	listener           net.Listener
-	table              *RouteTable
-	key                ed25519.PrivateKey
-	rpcHandlers        RPCHandlerFuncMap
-	closed             bool
-	maxPeers           int64
-	pingPeriod         int64
-	latencyPeriod      int64
+	listener      net.Listener
+	table         *RouteTable
+	key           ed25519.PrivateKey
+	rpcHandlers   RPCHandlerFuncMap
+	closed        bool
+	maxPeers      int64
+	pingPeriod    int64
+	latencyPeriod int64
 }
 
 // Return the host's ed25519 public key
@@ -154,20 +154,16 @@ func (host *Host) SendMessage(
 	}
 
 	// Parse the peer signature and response from the response payload
-	publicKey := responsePayload[:ed25519.PublicKeySize]
-	ecSignature := responsePayload[ed25519.PublicKeySize:PeerSignatureSize]
+	peerSignature := responsePayload[:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize:]
 
-	// Verify the peer key
-	peerKey := sha1.Sum(publicKey)
-	if !bytes.Equal(peerKey[:], remotePeerKey) {
-		return nil, fmt.Errorf("peer key in address does not match peer key in response")
-	}
-
-	// Verify the peer signature
+	// Verify the peer key of the response payload
 	hash = sha256.Sum256(peerResponse)
-	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
-		return nil, fmt.Errorf("invalid peer signature")
+	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, hash[:])
+	if err != nil {
+		return nil, err
+	} else if !bytes.Equal(peerKey, remotePeerKey) {
+		return nil, fmt.Errorf("peer key in address does not match peer key in response")
 	}
 
 	// Update the host's route table
