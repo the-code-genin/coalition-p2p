@@ -54,7 +54,7 @@ func main() {
 	maxPeers := int(coalition.DefaultMaxPeers)
 	prevLookUpRes := []*coalition.Peer{bootNode}
 	currentLookUpRes := []*coalition.Peer{bootNode}
-	for i := 0; i < 10; i++ {
+	for {
 		// Find up to max peers closest set of nodes to the key from the lookup nodes
 		newRes := make([]*coalition.Peer, 0)
 		for i := 0; len(newRes) < maxPeers && i < len(currentLookUpRes); i++ {
@@ -133,6 +133,10 @@ func main() {
 			}(currentLookUpRes[i])
 		}
 		wg.Wait()
+
+		if len(newRes) == 0 {
+			log.Fatal("unable to find node in network")
+		}
 
 		// Sort the network response from closest to farthest
 		newRes = coalition.MergeSortPeers(
