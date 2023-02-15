@@ -18,10 +18,6 @@ const PrivateKeyOption = "private_key"
 const MaxPeersOption = "max_peers"
 const DefaultMaxPeers = int64(PeerKeySize * 8)
 
-// Kademlia concurrent requests parameter
-const ConcurrentRequestsOption = "concurrent_requests"
-const DefaultConcurrentRequests = int64(float64(DefaultMaxPeers) * 0.1)
-
 // Ping RPC method
 const PingPeriodOption = "ping_period"
 const PingMethod = "ping"
@@ -32,5 +28,3 @@ const LatencyPeriodOption = "latency_period"
 const DefaultLatencyPeriod = int64(time.Hour)
 
 const FindNodeMethod = "find_node"
-const StoreProviderMethod = "store_provider"
-const FindProviderMethod = "find_provider"

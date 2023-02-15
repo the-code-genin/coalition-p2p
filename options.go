@@ -27,11 +27,6 @@ func MaxPeers(peers int64) Option {
 	return Option{MaxPeersOption, peers}
 }
 
-// The kademlia concurrent requets parameter
-func ConcurrentRequests(requests int64) Option {
-	return Option{ConcurrentRequestsOption, requests}
-}
-
 // The ping interval in seconds
 func PingPeriod(period int64) Option {
 	return Option{PingPeriodOption, period}

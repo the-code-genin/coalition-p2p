@@ -19,7 +19,6 @@ type Host struct {
 	rpcHandlers        RPCHandlerFuncMap
 	closed             bool
 	maxPeers           int64
-	concurrentRequests int64
 	pingPeriod         int64
 	latencyPeriod      int64
 }
@@ -223,13 +222,10 @@ func NewHost(
 
 	// Parse the kademlia parameters
 	maxPeers := getOption(MaxPeersOption, options, DefaultMaxPeers).(int64)
-	concurrentRequests := getOption(ConcurrentRequestsOption, options, DefaultConcurrentRequests).(int64)
 	pingPeriod := getOption(PingPeriodOption, options, DefaultPingPeriod).(int64)
 	latencyPeriod := getOption(LatencyPeriodOption, options, DefaultLatencyPeriod).(int64)
 	if pingPeriod >= latencyPeriod {
 		return nil, fmt.Errorf("ping period should be less than latency period")
-	} else if concurrentRequests < 1 {
-		return nil, fmt.Errorf("concurrent requests must be >= 1")
 	} else if maxPeers < 1 {
 		return nil, fmt.Errorf("max peers must be >= 1")
 	}
@@ -256,7 +252,6 @@ func NewHost(
 		rpcHandlers,
 		false,
 		maxPeers,
-		concurrentRequests,
 		pingPeriod,
 		latencyPeriod,
 	}
