@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 )
 
 // Represents a basic p2p node with an optimized kbucket peer store
@@ -149,7 +150,7 @@ func (host *Host) SendMessage(
 	responsePayload, err := ReadFromConn(conn)
 	if err != nil {
 		return nil, err
-	} else if len(responsePayload) < PeerSignatureSize+1 {
+	} else if len(responsePayload) <= PeerSignatureSize {
 		return nil, fmt.Errorf("incomplete response body")
 	}
 
@@ -192,6 +193,24 @@ func (host *Host) RegisterRPCMethod(
 	handler RPCHandlerFunc,
 ) {
 	host.rpcHandlers[methodName] = handler
+}
+
+// A long running service that pings all peers within it's route table
+// It only pings the peer if it's last seen is greater than the ping period
+func (host *Host) startPingService() {
+	for !host.closed {
+		for _, peer := range host.RouteTable().Peers() {
+			if time.Now().Unix()-peer.LastSeen() < host.pingPeriod {
+				continue
+			}
+			peerAddr, err := peer.Address()
+			if err != nil {
+				continue
+			}
+			host.Ping(peerAddr)
+		}
+		time.Sleep(time.Duration(host.pingPeriod))
+	}
 }
 
 // Close the host and any associated resources
@@ -255,6 +274,9 @@ func NewHost(
 	// Register standard RPC methods
 	host.RegisterRPCMethod(PingMethod, PingHandler)
 	host.RegisterRPCMethod(FindNodeMethod, FindNodeHandler)
+
+	// Fire up the ping interval
+	go host.startPingService()
 
 	return host, nil
 }

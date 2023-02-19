@@ -1,22 +1,19 @@
 package coalition
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
-	"math/big"
 	"net"
 	"testing"
 )
 
 func TestRPCServer(t *testing.T) {
 	// Generate a key pair for the host
-	hostPubKey, hostPrivKey, err := ed25519.GenerateKey(rand.Reader)
+	_, hostPrivKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,43 +68,29 @@ func TestRPCServer(t *testing.T) {
 	requestPayload = append(requestPayload, serializedRequest...)
 
 	// Send the request
-	payloadSizeBuffer := make([]byte, 8)
-	big.NewInt(int64(len(requestPayload))).FillBytes(payloadSizeBuffer)
-	if _, err := conn.Write(payloadSizeBuffer); err != nil {
+	if err := WriteToConn(conn, requestPayload); err != nil {
 		t.Error(err)
 	}
-	if _, err := conn.Write(requestPayload); err != nil {
-		t.Error(err)
-	}
-
-	// Parse the size of the response payload in bytes
-	responseReader := bufio.NewReader(conn)
-	payloadSizeBuffer = make([]byte, 8)
-	_, err = io.ReadFull(responseReader, payloadSizeBuffer)
-	if err != nil {
-		t.Error(err)
-	}
-	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
 
 	// Read response payload
-	responsePayload := make([]byte, payloadSize)
-	_, err = io.ReadFull(responseReader, responsePayload)
+	responsePayload, err := ReadFromConn(conn)
 	if err != nil {
 		t.Error(err)
-	} else if len(responsePayload) < PeerSignatureSize+1 {
+	} else if len(responsePayload) <= PeerSignatureSize {
 		t.Errorf("incomplete response body")
 	}
 
 	// Parse the peer signature and request from the payload
-	publicKey := responsePayload[:ed25519.PublicKeySize]
-	ecSignature := responsePayload[ed25519.PublicKeySize:PeerSignatureSize]
+	peerSignature := responsePayload[:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize:]
 
 	// Verify the peer signature
-	hash = sha256.Sum256(peerResponse)
-	if !ed25519.Verify(publicKey, hash[:], ecSignature) {
-		t.Errorf("Invalid peer signature")
-	} else if !bytes.Equal(hostPubKey, publicKey) {
+	responseHash := sha256.Sum256(peerResponse)
+	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, responseHash[:])
+	hostPeerKey := host.PeerKey()
+	if err != nil {
+		t.Error(err)
+	} else if !bytes.Equal(peerKey, hostPeerKey[:]) {
 		t.Errorf("Response payload not signed by host")
 	}
 
