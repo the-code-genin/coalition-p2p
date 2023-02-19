@@ -10,9 +10,11 @@ import (
 var wg sync.WaitGroup
 
 func main() {
+	noNodes := 5
 	basePort := 3000
 	hosts := make([]*coalition.Host, 0)
-	for i := 0; i < int(coalition.DefaultMaxPeers); i++ {
+	for i := 0; i < noNodes; i++ {
+		// Create new host
 		host, err := coalition.NewHost(basePort + i)
 		if err != nil {
 			panic(err)
@@ -20,26 +22,25 @@ func main() {
 		defer host.Close()
 		go host.Listen()
 
+		// Print host address
 		addrs, err := host.Addresses()
 		if err != nil {
 			panic(err)
 		}
 		fmt.Printf("Node listening on [%s]\n", addrs[0])
 
-		// Connect to last 10 hosts
-		added := 0
-		for i := len(hosts); i > 0 && added < 10; i-- {
-			prevHost := hosts[i - 1]
+		// Connect to all previous nodes
+		for i := 0; i < len(hosts); i++ {
+			prevHost := hosts[i]
 			if err := prevHost.Ping(addrs[0]); err != nil {
 				panic(err)
 			}
-			added++
 		}
 
 		hosts = append(hosts, host)
 	}
 
-	fmt.Println("Boot nodes online")
+	fmt.Printf("[%d] boot nodes online\n", noNodes)
 	wg.Add(1)
 	wg.Wait()
 }
