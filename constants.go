@@ -12,6 +12,7 @@ const PeerKeySize = sha1.Size
 // Size of peer payload signature in bytes
 const PeerSignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
 
+// Peer identity option
 const PrivateKeyOption = "private_key"
 
 // Kademlia replication parameter
@@ -24,7 +25,9 @@ const PingMethod = "ping"
 const PingResponse = "pong"
 const DefaultPingPeriod = int64(time.Minute * 5)
 
+// Node latency period before it's kicked off the routing table
 const LatencyPeriodOption = "latency_period"
 const DefaultLatencyPeriod = int64(time.Hour)
 
+// RPC method to list peers near a certain key
 const FindNodeMethod = "find_node"
