@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	host, err := coalition.NewHost(3000)
+	host, err := coalition.NewHost(4000)
 	if err != nil {
 		panic(err)
 	}
