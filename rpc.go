@@ -42,15 +42,15 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		}
 
 		// Prepare response signature
-		hash := sha256.Sum256(serializedResponse)
-		signature, err := host.Sign(hash[:])
+		responseHash := sha256.Sum256(serializedResponse)
+		responseSignature, err := host.Sign(responseHash[:])
 		if err != nil {
 			return
 		}
 
 		// Prepare the full response payload
 		payload := make([]byte, 0)
-		payload = append(payload, signature[:]...)
+		payload = append(payload, responseSignature[:]...)
 		payload = append(payload, serializedResponse...)
 
 		// Return the response
@@ -72,8 +72,8 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	peerRequest := payload[PeerSignatureSize:]
 
 	// Verify the peer signature
-	hash := sha256.Sum256(peerRequest)
-	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, hash[:])
+	requestHash := sha256.Sum256(peerRequest)
+	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, requestHash[:])
 	if err != nil {
 		response.Data = err.Error()
 		return

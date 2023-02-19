@@ -129,15 +129,15 @@ func (host *Host) SendMessage(
 	}
 
 	// Prepare request signature
-	hash := sha256.Sum256(serializedRequest)
-	signature, err := host.Sign(hash[:])
+	requestHash := sha256.Sum256(serializedRequest)
+	requestSignature, err := host.Sign(requestHash[:])
 	if err != nil {
 		return nil, err
 	}
 
 	// Prepare the full request payload
 	requestPayload := make([]byte, 0)
-	requestPayload = append(requestPayload, signature[:]...)
+	requestPayload = append(requestPayload, requestSignature[:]...)
 	requestPayload = append(requestPayload, serializedRequest...)
 
 	// Send the request
@@ -158,8 +158,8 @@ func (host *Host) SendMessage(
 	peerResponse := responsePayload[PeerSignatureSize:]
 
 	// Verify the peer key of the response payload
-	hash = sha256.Sum256(peerResponse)
-	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, hash[:])
+	responseHash := sha256.Sum256(peerResponse)
+	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, responseHash[:])
 	if err != nil {
 		return nil, err
 	} else if !bytes.Equal(peerKey, remotePeerKey) {
