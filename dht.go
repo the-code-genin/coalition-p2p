@@ -2,6 +2,8 @@ package coalition
 
 import (
 	"bytes"
+	"math"
+	"math/big"
 	"sync"
 )
 
@@ -12,9 +14,11 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 
 	hostKey := host.PeerKey()
 	concurrentRequests := int(host.concurrentRequests)
+
+	activeNodes, inactiveNodes := host.filterDeadNodes(host.RouteTable().Peers())
 	prevLookUpRes := make([]*Peer, 0)
 	currentLookUpRes := SortPeersByClosest(
-		host.filterDeadNodes(host.RouteTable().Peers()),
+		activeNodes,
 		searchKey,
 	)
 
@@ -24,7 +28,16 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
 		prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
 
-		// Find closest set of nodes to the key from the lookup nodes
+		// Max distance of furtherest peer in prev lookups
+		maxDistance := math.MaxInt64
+		if len(prevLookUpRes) > 0 {
+			maxDistance = int(new(big.Int).Xor(
+				new(big.Int).SetBytes(prevLookUpRes[len(prevLookUpRes)-1].Key()),
+				new(big.Int).SetBytes(searchKey),
+			).Int64())
+		}
+
+		// Find closer set of nodes to the key from the lookup nodes
 		newRes := make([]*Peer, 0)
 		for i := 0; i < concurrentRequests && i < len(currentLookUpRes); i++ {
 			wg.Add(1)
@@ -62,6 +75,18 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 						continue
 					}
 
+					// Skip inactive nodes
+					inactive := false
+					for i := 0; i < len(inactiveNodes); i++ {
+						if bytes.Equal(inactiveNodes[i].Key(), peer.Key()) {
+							inactive = true
+							break
+						}
+					}
+					if inactive {
+						continue
+					}
+
 					// Skip duplicates
 					duplicate := false
 					for i := 0; i < len(newRes); i++ {
@@ -74,8 +99,13 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 						continue
 					}
 
-					// Skip this host for next look up
-					if bytes.Equal(peer.Key(), hostKey[:]) {
+					// Ensure this peer is closer than the furtherest of the previous peers
+					// And ensure the peer isn't this host
+					distance := int(new(big.Int).Xor(
+						new(big.Int).SetBytes(peer.Key()),
+						new(big.Int).SetBytes(searchKey),
+					).Int64())
+					if distance > maxDistance || bytes.Equal(peer.Key(), hostKey[:]) {
 						prevLookUpRes = append(prevLookUpRes, peer)
 						continue
 					}
@@ -92,7 +122,10 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		}
 
 		// Refresh lookup nodes for next look up
-		currentLookUpRes = SortPeersByClosest(host.filterDeadNodes(newRes), searchKey)
+		// Dead nodes are noted to prevent interference with future results
+		activeNodes, deadNodes := host.filterDeadNodes(newRes)
+		currentLookUpRes = SortPeersByClosest(activeNodes, searchKey)
+		inactiveNodes = append(inactiveNodes, deadNodes...)
 	}
 
 	// Sort all lookups from closest to farthest

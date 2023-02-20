@@ -7,11 +7,12 @@ import (
 )
 
 // Helper to filter dead nodes from a list of peers
-func (host *Host) filterDeadNodes(peers []*Peer) []*Peer {
+func (host *Host) filterDeadNodes(peers []*Peer) (activeNodes, deadNodes []*Peer) {
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 
-	res := make([]*Peer, 0)
+	activeNodes = make([]*Peer, 0)
+	deadNodes = make([]*Peer, 0)
 	for _, peer := range peers {
 
 		// Check for keep alive asynchronously
@@ -22,21 +23,23 @@ func (host *Host) filterDeadNodes(peers []*Peer) []*Peer {
 			// Get the full peer address
 			peerAddr, err := peer.Address()
 			if err != nil {
+				deadNodes = append(deadNodes, peer)
 				return
 			}
 
 			// Check if peer is alive
 			if err := host.Ping(peerAddr); err != nil {
+				deadNodes = append(deadNodes, peer)
 				return
 			}
 
 			mutex.Lock()
 			defer mutex.Unlock()
-			res = append(res, peer)
+			activeNodes = append(activeNodes, peer)
 		}(peer)
 	}
 	wg.Wait()
-	return res
+	return
 }
 
 // Send a ping to the host at the address

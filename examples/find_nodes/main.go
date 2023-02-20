@@ -1,167 +1,65 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/the-code-genin/coalition-p2p"
 )
 
-var wg sync.WaitGroup
-var mutex sync.Mutex
-
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatalf("Remote node address and search key must be specified as the argument")
+	if len(os.Args) < 2 {
+		log.Fatalf("At least remote node address must be specified as the argument")
 	}
 
-	// Setup host
+	// Create a new DHT host
 	host, err := coalition.NewHost()
 	if err != nil {
 		panic(err)
 	}
-	hostKey := host.PeerKey()
 	defer host.Close()
 
-	// Parse bootnode and search key
-	bootNode, err := coalition.NewPeerFromAddress(os.Args[1])
-	if err != nil {
+	// Connect to the bootnode
+	if err := host.Ping(os.Args[1]); err != nil {
 		panic(err)
 	}
-	searchKey, err := hex.DecodeString(os.Args[2])
-	if err != nil {
-		panic(err)
+	fmt.Println("Completed bootstrap")
+
+	// Parse search key
+	var searchKey []byte
+	if len(os.Args) > 2 {
+		searchKey, err = hex.DecodeString(os.Args[2])
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		key := host.PeerKey()
+		searchKey = key[:]
 	}
 
-	// Output
+	// Print host address
 	addrs, err := host.Addresses()
 	if err != nil {
 		panic(err)
 	}
-	bootnodeAddr, err := bootNode.Address()
+	fmt.Printf(
+		"Finding closest nodes to [%s] from [%s]\n", 
+		hex.EncodeToString(searchKey), 
+		addrs[0],
+	)
+
+	// Find closest nodes to the search key
+	nodes, err := host.FindClosestNodes(searchKey)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Sending [find_node] from [%s]\n", addrs[0])
-	fmt.Printf("Boot node [%s]\n", bootnodeAddr)
-	fmt.Printf("Search key [%s]\n", hex.EncodeToString(searchKey))
-
-	maxPeers := int(coalition.DefaultMaxPeers)
-	prevLookUpRes := make([]*coalition.Peer, 0)
-	currentLookUpRes := []*coalition.Peer{bootNode}
-	for {
-		// Current lookups becomes previous lookups
-		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
-
-		// Find up to max peers closest set of nodes to the key from the lookup nodes
-		newRes := make([]*coalition.Peer, 0)
-		for i := 0; len(newRes) < maxPeers && i < len(currentLookUpRes); i++ {
-			wg.Add(1)
-			go func(lookupNode *coalition.Peer) {
-				defer wg.Done()
-
-				// Skip this DHT's host
-				if bytes.Equal(lookupNode.Key(), hostKey[:]) {
-					return
-				}
-
-				lookupNodeAddr, err := lookupNode.Address()
-				if err != nil {
-					panic(err)
-				}
-				responseAddrs, err := host.FindNode(lookupNodeAddr, searchKey)
-				if err != nil {
-					panic(err)
-				}
-
-				mutex.Lock()
-				defer mutex.Unlock()
-
-				if len(newRes) >= maxPeers {
-					return
-				}
-
-				for _, responseAddr := range responseAddrs {
-					peer, err := coalition.NewPeerFromAddress(responseAddr)
-					if err != nil {
-						panic(err)
-					}
-
-					// Found search key
-					if bytes.Equal(peer.Key(), searchKey) {
-						peerAddr, err := peer.Address()
-						if err != nil {
-							panic(err)
-						}
-						fmt.Printf("Found node at [%s]\n", peerAddr)
-						log.Fatalf("\n")
-					} else if bytes.Equal(peer.Key(), hostKey[:]) {
-						continue
-					}
-
-					// Skip old look ups
-					old := false
-					for i := 0; i < len(prevLookUpRes); i++ {
-						if bytes.Equal(prevLookUpRes[i].Key(), peer.Key()) {
-							old = true
-							break
-						}
-					}
-					if old {
-						continue
-					}
-
-					// Skip duplicates
-					duplicate := false
-					for i := 0; i < len(newRes); i++ {
-						if bytes.Equal(newRes[i].Key(), peer.Key()) {
-							duplicate = true
-							break
-						}
-					}
-					if duplicate {
-						continue
-					}
-
-					newRes = append(newRes, peer)
-				}
-			}(currentLookUpRes[i])
+	for _, node := range nodes {
+		nodeAddr, err := node.Address()
+		if err != nil {
+			panic(err)
 		}
-		wg.Wait()
-
-		if len(newRes) == 0 {
-			log.Fatal("unable to find node in network")
-		}
-
-		// Sort the network response from closest to farthest
-		newRes = coalition.SortPeersByClosest(newRes, searchKey)
-
-		// Output
-		fmt.Printf("Got [%d] new closer peers from network\n", len(newRes))
-		for _, peer := range newRes {
-			fmt.Println(peer.Address())
-		}
-		fmt.Println()
-
-		// Refresh lookup nodes for next look up
-		// Dead nodes are filtered out
-		// If the node has been queried before it is skipped
-		currentLookUpRes = make([]*coalition.Peer, 0)
-		for _, peer := range newRes {
-			peerAddr, err := peer.Address()
-			if err != nil {
-				panic(err)
-			}
-
-			// Check if alive
-			if err := host.Ping(peerAddr); err != nil {
-				continue
-			}
-			currentLookUpRes = append(currentLookUpRes, peer)
-		}
+		fmt.Println(nodeAddr)
 	}
 }
