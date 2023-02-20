@@ -204,7 +204,7 @@ func (host *Host) RegisterRPCMethod(
 }
 
 // A long running service that pings all peers within it's route table
-// It only pings the peer if it's last seen is greater than the ping period
+// It only pings the peer if it's last seen interval is greater than the ping period
 func (host *Host) startPingService() {
 	for !host.closed {
 		for _, peer := range host.RouteTable().Peers() {
@@ -218,6 +218,19 @@ func (host *Host) startPingService() {
 			host.Ping(peerAddr)
 		}
 		time.Sleep(time.Duration(host.pingPeriod))
+	}
+}
+
+// A long running service that prunes inactive peers within it's route table
+func (host *Host) startLatencyPruneService() {
+	for !host.closed {
+		for _, peer := range host.RouteTable().Peers() {
+			if time.Now().Unix()-peer.LastSeen() < host.latencyPeriod {
+				continue
+			}
+			host.table.Remove(peer.Key())
+		}
+		time.Sleep(time.Duration(host.latencyPeriod))
 	}
 }
 
@@ -286,8 +299,9 @@ func NewHost(
 	host.RegisterRPCMethod(PingMethod, PingHandler)
 	host.RegisterRPCMethod(FindNodeMethod, FindNodeHandler)
 
-	// Fire up the ping interval
+	// Fire up long running services
 	go host.startPingService()
+	go host.startLatencyPruneService()
 
 	return host, nil
 }
