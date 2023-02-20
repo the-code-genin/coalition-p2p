@@ -117,22 +117,7 @@ func (table *RouteTable) SortPeersByProximity(key []byte) ([]*Peer, error) {
 	if len(key) != len(table.locusKey) {
 		return nil, fmt.Errorf("key length miss-match")
 	}
-	peers := MergeSortPeers(
-		table.peers,
-		make([]*Peer, 0),
-		func(peerA, peerB *Peer) int {
-			distanceA := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerA.key),
-				new(big.Int).SetBytes(key),
-			).Bytes()
-			distanceB := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerB.key),
-				new(big.Int).SetBytes(key),
-			).Bytes()
-			return bytes.Compare(distanceB, distanceA)
-		},
-	)
-	return peers, nil
+	return SortPeersByClosest(table.peers, key), nil
 }
 
 // Remove a peer from the route table
