@@ -195,10 +195,7 @@ func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 func WriteToConn(conn net.Conn, data []byte) error {
 	conn.SetWriteDeadline(time.Now().Add(TCPIODeadline))
 
-	// Determine the size of the payload
-	buffer := make([]byte, 8)
-	big.NewInt(int64(len(data))).FillBytes(buffer)
-	if _, err := conn.Write(buffer); err != nil {
+	if _, err := conn.Write(Int64ToBytes(int64(len(data)))); err != nil {
 		return err
 	}
 	if _, err := conn.Write(data); err != nil {
@@ -218,7 +215,7 @@ func ReadFromConn(conn net.Conn) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	payloadSize := new(big.Int).SetBytes(payloadSizeBuffer).Int64()
+	payloadSize := BytesToInt64(payloadSizeBuffer)
 
 	// Read the payload from the connection
 	payload := make([]byte, payloadSize)
