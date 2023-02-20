@@ -20,7 +20,7 @@ const PortOption = "port"
 
 // Kademlia replication parameter
 const MaxPeersOption = "max_peers"
-const DefaultMaxPeers = int64(PeerKeySize * 8)
+const DefaultMaxPeers = int64(PeerKeySize * 8 * 1.5)
 
 // Kademlia concurrent requests parameter
 const ConcurrentRequestsOption = "concurrent_requests"
