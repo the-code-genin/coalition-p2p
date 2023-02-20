@@ -14,6 +14,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 
+	hostKey := dht.host.PeerKey()
 	maxPeers := int(dht.host.maxPeers)
 	prevLookUpRes := make([]*Peer, 0)
 	currentLookUpRes := dht.host.RouteTable().Peers()
@@ -31,7 +32,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 				defer wg.Done()
 
 				// Skip this DHT's host
-				if bytes.Equal(lookupNode.Key(), dht.host.key[:]) {
+				if bytes.Equal(lookupNode.Key(), hostKey[:]) {
 					return
 				}
 
@@ -58,7 +59,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 					}
 
 					// Skip this DHT's host
-					if bytes.Equal(peer.Key(), dht.host.key[:]) {
+					if bytes.Equal(peer.Key(), hostKey[:]) {
 						continue
 					}
 
