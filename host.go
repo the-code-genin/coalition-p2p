@@ -136,8 +136,15 @@ func (host *Host) SendMessage(
 		return nil, err
 	}
 
+	// Get the host's listening port
+	hostPort, err := host.Port()
+	if err != nil {
+		return nil, err
+	}
+
 	// Prepare the full request payload
 	requestPayload := make([]byte, 0)
+	requestPayload = append(requestPayload, Int64ToBytes(int64(hostPort))...)
 	requestPayload = append(requestPayload, requestSignature[:]...)
 	requestPayload = append(requestPayload, serializedRequest...)
 
@@ -158,7 +165,7 @@ func (host *Host) SendMessage(
 	peerSignature := responsePayload[:PeerSignatureSize]
 	peerResponse := responsePayload[PeerSignatureSize:]
 
-	// Verify the peer key of the response payload
+	// Verify the peer key in the response payload
 	responseHash := sha256.Sum256(peerResponse)
 	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, responseHash[:])
 	if err != nil {

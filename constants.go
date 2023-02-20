@@ -25,9 +25,12 @@ const PingMethod = "ping"
 const PingResponse = "pong"
 const DefaultPingPeriod = int64(time.Minute * 5)
 
-// Node latency period before it's kicked off the routing table
+// Node latency period before it's eligible to be kicked off the routing table
 const LatencyPeriodOption = "latency_period"
 const DefaultLatencyPeriod = int64(time.Hour)
 
 // RPC method to list peers near a certain key
 const FindNodeMethod = "find_node"
+
+// Size of 64 bit integers in bytes
+const Int64Len = 8

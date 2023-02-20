@@ -3,6 +3,7 @@ package coalition
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 )
@@ -62,16 +63,17 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	if err != nil {
 		response.Data = err.Error()
 		return
-	} else if len(payload) <= PeerSignatureSize {
+	} else if len(payload) <= Int64Len+PeerSignatureSize {
 		response.Data = "Incomplete request body"
 		return
 	}
 
-	// Parse the peer signature and request from the payload
-	peerSignature := payload[:PeerSignatureSize]
-	peerRequest := payload[PeerSignatureSize:]
+	// Parse the peer listening port, signature and request from the payload
+	peerPort := BytesToInt64(payload[:Int64Len])
+	peerSignature := payload[Int64Len : Int64Len+PeerSignatureSize]
+	peerRequest := payload[Int64Len+PeerSignatureSize:]
 
-	// Verify the peer signature
+	// Verify the peer signature and recover the peer key
 	requestHash := sha256.Sum256(peerRequest)
 	peerKey, err := RecoverPeerKeyFromPeerSignature(peerSignature, requestHash[:])
 	if err != nil {
@@ -79,16 +81,29 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 		return
 	}
 
-	// Parse the peer information and update the host's peer store
-	peerAddr := conn.RemoteAddr().(*net.TCPAddr)
-	_, err = host.RouteTable().Insert(
+	// Parse the remote peer details
+	peer := &Peer{
 		peerKey[:],
-		peerAddr.IP.To4().String(),
-		peerAddr.Port,
-	)
-	if err != nil {
-		response.Data = err.Error()
-		return
+		conn.RemoteAddr().(*net.TCPAddr).IP.To4().String(),
+		int(peerPort),
+		int64(time.Now().Unix()),
+	}
+
+	// Attempt to connect to the peer to ensure the peer can accept RPC requests
+	tmpConn, err := net.Dial("tcp4", fmt.Sprintf("%s:%d", peer.IPAddress(), peer.Port()))
+	if err == nil {
+		tmpConn.Close()
+
+		// Update the host's peer store
+		_, err := host.RouteTable().Insert(
+			peer.Key(),
+			peer.IPAddress(),
+			peer.Port(),
+		)
+		if err != nil {
+			response.Data = err.Error()
+			return
+		}
 	}
 
 	// Parse the RPC request from the payload
@@ -106,12 +121,6 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	}
 
 	// Handle the RPC request
-	peer := &Peer{
-		peerKey[:],
-		peerAddr.IP.To4().String(),
-		peerAddr.Port,
-		int64(time.Now().Unix()),
-	}
 	response.Data, err = handler(
 		host,
 		peer,

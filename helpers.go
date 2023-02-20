@@ -223,3 +223,14 @@ func RecoverPeerKeyFromPeerSignature(signature, hash []byte) ([]byte, error) {
 	peerKey := sha1.Sum(publicKey)
 	return peerKey[:], nil
 }
+
+// Converts a 64 bit integer to bytes
+func Int64ToBytes(data int64) []byte {
+	buffer := make([]byte, 8)
+	return big.NewInt(data).FillBytes(buffer)
+}
+
+// Converts bytes into a 64 bit integer
+func BytesToInt64(data []byte) int64 {
+	return new(big.Int).SetBytes(data).Int64()
+}
