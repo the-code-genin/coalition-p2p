@@ -19,7 +19,6 @@ func main() {
 		panic(err)
 	}
 	defer host.Close()
-	dht := coalition.NewDHT(host)
 
 	// Connect to the bootnode
 	if err := host.Ping(os.Args[1]); err != nil {
@@ -36,7 +35,7 @@ func main() {
 
 	// Find closest nodes to the host
 	hostKey := host.PeerKey()
-	nodes, err := dht.FindClosestNodes(hostKey[:])
+	nodes, err := host.FindClosestNodes(hostKey[:])
 	if err != nil {
 		panic(err)
 	}

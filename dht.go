@@ -5,24 +5,22 @@ import (
 	"sync"
 )
 
-type DHT struct {
-	host *Host
-}
 
-// Find peers closest to a search key
-func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
+// Find network peers closest to a search key
+func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 
-	hostKey := dht.host.PeerKey()
-	maxPeers := int(dht.host.maxPeers)
+	hostKey := host.PeerKey()
+	maxPeers := int(host.maxPeers)
 	prevLookUpRes := make([]*Peer, 0)
-	currentLookUpRes := dht.host.RouteTable().Peers()
+	currentLookUpRes := host.RouteTable().Peers()
 
 	// Do a recursive search until all closest nodes have been found
 	for {
-		// Current lookups becomes previous lookups
+		// Current lookups becomes part of previous lookups
 		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
+		prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
 
 		// Find up to max peers closest set of nodes to the key from the lookup nodes
 		newRes := make([]*Peer, 0)
@@ -40,7 +38,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 				if err != nil {
 					return
 				}
-				responseAddrs, err := dht.host.FindNode(lookupNodeAddr, searchKey)
+				responseAddrs, err := host.FindNode(lookupNodeAddr, searchKey)
 				if err != nil {
 					return
 				}
@@ -113,7 +111,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 			}
 
 			// Check if peer is alive
-			if err := dht.host.Ping(peerAddr); err != nil {
+			if err := host.Ping(peerAddr); err != nil {
 				continue
 			}
 			currentLookUpRes = append(currentLookUpRes, peer)
@@ -123,12 +121,8 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	// Sort all lookups from closest to farthest
 	// Return at most max peers
 	prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
-	if len(prevLookUpRes) >= int(dht.host.maxPeers) {
-		return prevLookUpRes[:dht.host.maxPeers], nil
+	if len(prevLookUpRes) >= int(host.maxPeers) {
+		return prevLookUpRes[:host.maxPeers], nil
 	}
 	return prevLookUpRes, nil
-}
-
-func NewDHT(host *Host) *DHT {
-	return &DHT{host}
 }
