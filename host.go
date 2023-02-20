@@ -14,14 +14,15 @@ import (
 
 // Represents a basic p2p node with an optimized kbucket peer store
 type Host struct {
-	listener      net.Listener
-	table         *RouteTable
-	key           ed25519.PrivateKey
-	rpcHandlers   RPCHandlerFuncMap
-	closed        bool
-	maxPeers      int64
-	pingPeriod    int64
-	latencyPeriod int64
+	listener           net.Listener
+	table              *RouteTable
+	key                ed25519.PrivateKey
+	rpcHandlers        RPCHandlerFuncMap
+	closed             bool
+	maxPeers           int64
+	pingPeriod         int64
+	latencyPeriod      int64
+	concurrentRequests int64
 }
 
 // Return the host's ed25519 public key
@@ -244,10 +245,13 @@ func NewHost(
 	maxPeers := getOption(MaxPeersOption, options, DefaultMaxPeers).(int64)
 	pingPeriod := getOption(PingPeriodOption, options, DefaultPingPeriod).(int64)
 	latencyPeriod := getOption(LatencyPeriodOption, options, DefaultLatencyPeriod).(int64)
+	concurrentRequests := getOption(ConcurrentRequestsOption, options, DefaultConcurrentRequests).(int64)
 	if pingPeriod >= latencyPeriod {
 		return nil, fmt.Errorf("ping period should be less than latency period")
 	} else if maxPeers < 1 {
 		return nil, fmt.Errorf("max peers must be >= 1")
+	} else if concurrentRequests > maxPeers {
+		return nil, fmt.Errorf("concurrent requests must be <= max peers")
 	}
 
 	// Create a peer store
@@ -275,6 +279,7 @@ func NewHost(
 		maxPeers,
 		pingPeriod,
 		latencyPeriod,
+		concurrentRequests,
 	}
 
 	// Register standard RPC methods

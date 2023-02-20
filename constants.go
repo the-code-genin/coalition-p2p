@@ -22,6 +22,10 @@ const PortOption = "port"
 const MaxPeersOption = "max_peers"
 const DefaultMaxPeers = int64(PeerKeySize * 8)
 
+// Kademlia concurrent requests parameter
+const ConcurrentRequestsOption = "concurrent_requests"
+const DefaultConcurrentRequests = int64(float64(DefaultMaxPeers) * 0.05)
+
 // Ping RPC method
 const PingPeriodOption = "ping_period"
 const PingMethod = "ping"
