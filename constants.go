@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// Size of 64 bit integers in bytes
+const Int64Len = 8
+
 // Size of peer key in bytes
 const PeerKeySize = sha1.Size
 
@@ -20,7 +23,7 @@ const PortOption = "port"
 
 // Kademlia replication parameter
 const MaxPeersOption = "max_peers"
-const DefaultMaxPeers = int64(PeerKeySize * 8 * 1.5)
+const DefaultMaxPeers = int64(PeerKeySize * Int64Len * 1.5)
 
 // Kademlia concurrent requests parameter
 const ConcurrentRequestsOption = "concurrent_requests"
@@ -38,9 +41,6 @@ const DefaultLatencyPeriod = int64(time.Hour)
 
 // RPC method to list peers near a certain key
 const FindNodeMethod = "find_node"
-
-// Size of 64 bit integers in bytes
-const Int64Len = 8
 
 // TCP Read/Write deadlines
 const TCPIODeadline = time.Minute
