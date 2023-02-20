@@ -18,7 +18,7 @@ func main() {
 	var wg sync.WaitGroup
 	bootNodes := os.Args[1:]
 	hosts := make([]*coalition.Host, 0)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10; i++ {
 		host, err := coalition.NewHost()
 		if err != nil {
 			panic(err)
