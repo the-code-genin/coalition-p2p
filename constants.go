@@ -39,4 +39,4 @@ const FindNodeMethod = "find_node"
 const Int64Len = 8
 
 // TCP Read/Write deadlines
-const TCPIODeadline = time.Second * 100
+const TCPIODeadline = time.Minute
