@@ -102,7 +102,6 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 
 		// Refresh lookup nodes for next look up
 		// Dead nodes are filtered out
-		// If the node has been queried before it is skipped
 		currentLookUpRes = make([]*Peer, 0)
 		for _, peer := range newRes {
 			peerAddr, err := peer.Address()
@@ -119,8 +118,8 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	}
 
 	// Sort all lookups from closest to farthest
+	// Return at most max peers
 	prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
-
 	if len(prevLookUpRes) >= int(dht.host.maxPeers) {
 		return prevLookUpRes[:dht.host.maxPeers], nil
 	}
