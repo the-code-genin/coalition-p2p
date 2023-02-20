@@ -33,7 +33,7 @@ const DefaultConcurrentRequests = int64(float64(DefaultMaxPeers) * 0.05)
 const PingPeriodOption = "ping_period"
 const PingMethod = "ping"
 const PingResponse = "pong"
-const DefaultPingPeriod = int64(time.Minute * 5)
+const DefaultPingPeriod = int64(time.Minute * 20)
 
 // Node latency period before it's eligible to be kicked off the routing table
 const LatencyPeriodOption = "latency_period"
