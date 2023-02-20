@@ -2,6 +2,7 @@ package coalition
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha1"
 	"encoding/hex"
@@ -169,6 +170,24 @@ func MergeSortPeers(
 	}
 
 	return output
+}
+
+func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
+	return MergeSortPeers(
+		peers,
+		make([]*Peer, 0),
+		func(peerA, peerB *Peer) int {
+			distanceA := new(big.Int).Xor(
+				new(big.Int).SetBytes(peerA.Key()),
+				new(big.Int).SetBytes(searchKey),
+			).Bytes()
+			distanceB := new(big.Int).Xor(
+				new(big.Int).SetBytes(peerB.Key()),
+				new(big.Int).SetBytes(searchKey),
+			).Bytes()
+			return bytes.Compare(distanceB, distanceA)
+		},
+	)
 }
 
 // Writes a payload to the connection

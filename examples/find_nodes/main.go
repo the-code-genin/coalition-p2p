@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
-	"math/big"
 	"os"
 	"sync"
 
@@ -139,21 +138,7 @@ func main() {
 		}
 
 		// Sort the network response from closest to farthest
-		newRes = coalition.MergeSortPeers(
-			newRes,
-			make([]*coalition.Peer, 0),
-			func(peerA, peerB *coalition.Peer) int {
-				distanceA := new(big.Int).Xor(
-					new(big.Int).SetBytes(peerA.Key()),
-					new(big.Int).SetBytes(searchKey),
-				).Bytes()
-				distanceB := new(big.Int).Xor(
-					new(big.Int).SetBytes(peerB.Key()),
-					new(big.Int).SetBytes(searchKey),
-				).Bytes()
-				return bytes.Compare(distanceB, distanceA)
-			},
-		)
+		newRes = coalition.SortPeersByClosest(newRes, searchKey)
 
 		// Output
 		fmt.Printf("Got [%d] new closer peers from network\n", len(newRes))

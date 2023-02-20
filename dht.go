@@ -2,7 +2,6 @@ package coalition
 
 import (
 	"bytes"
-	"math/big"
 	"sync"
 )
 
@@ -99,21 +98,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		}
 
 		// Sort the network response from closest to farthest from the search key
-		newRes = MergeSortPeers(
-			newRes,
-			make([]*Peer, 0),
-			func(peerA, peerB *Peer) int {
-				distanceA := new(big.Int).Xor(
-					new(big.Int).SetBytes(peerA.Key()),
-					new(big.Int).SetBytes(searchKey),
-				).Bytes()
-				distanceB := new(big.Int).Xor(
-					new(big.Int).SetBytes(peerB.Key()),
-					new(big.Int).SetBytes(searchKey),
-				).Bytes()
-				return bytes.Compare(distanceB, distanceA)
-			},
-		)
+		newRes = SortPeersByClosest(newRes, searchKey)
 
 		// Refresh lookup nodes for next look up
 		// Dead nodes are filtered out
@@ -134,21 +119,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	}
 
 	// Sort all lookups from closest to farthest
-	prevLookUpRes = MergeSortPeers(
-		prevLookUpRes,
-		make([]*Peer, 0),
-		func(peerA, peerB *Peer) int {
-			distanceA := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerA.Key()),
-				new(big.Int).SetBytes(searchKey),
-			).Bytes()
-			distanceB := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerB.Key()),
-				new(big.Int).SetBytes(searchKey),
-			).Bytes()
-			return bytes.Compare(distanceB, distanceA)
-		},
-	)
+	prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
 
 	if len(prevLookUpRes) >= int(dht.host.maxPeers) {
 		return prevLookUpRes[:dht.host.maxPeers], nil
