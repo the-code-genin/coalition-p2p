@@ -11,11 +11,10 @@ var wg sync.WaitGroup
 
 func main() {
 	noNodes := 5
-	basePort := 4000
 	hosts := make([]*coalition.Host, 0)
 	for i := 0; i < noNodes; i++ {
 		// Create new host
-		host, err := coalition.NewHost(basePort + i)
+		host, err := coalition.NewHost()
 		if err != nil {
 			panic(err)
 		}

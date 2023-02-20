@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Setup host
-	host, err := coalition.NewHost(4030)
+	host, err := coalition.NewHost()
 	if err != nil {
 		panic(err)
 	}

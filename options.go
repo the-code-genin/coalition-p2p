@@ -17,6 +17,11 @@ func getOption(name string, opList []Option, defaultValue interface{}) interface
 	return defaultValue
 }
 
+// The listening port to be used by the host
+func Port(port int) Option {
+	return Option{PortOption, port}
+}
+
 // The private key to be used by the host
 func Identity(key ed25519.PrivateKey) Option {
 	return Option{PrivateKeyOption, key}

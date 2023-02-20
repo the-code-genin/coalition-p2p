@@ -15,6 +15,9 @@ const PeerSignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
 // Peer identity option
 const PrivateKeyOption = "private_key"
 
+// Peer listening port option
+const PortOption = "port"
+
 // Kademlia replication parameter
 const MaxPeersOption = "max_peers"
 const DefaultMaxPeers = int64(PeerKeySize * 8)

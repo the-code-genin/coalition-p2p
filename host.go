@@ -226,13 +226,11 @@ func (host *Host) Close() {
 	host.listener.Close()
 }
 
-// Create a new P2P host on the specified ip4 port
-// Options can be passed to configure the node
+// Create a new P2P host
 func NewHost(
-	port int,
 	options ...Option,
 ) (*Host, error) {
-	// Parse the peer key
+	// Parse the peer private key
 	key, ok := getOption(PrivateKeyOption, options, nil).(ed25519.PrivateKey)
 	if !ok {
 		_, privKey, err := ed25519.GenerateKey(rand.Reader)
@@ -260,6 +258,7 @@ func NewHost(
 	}
 
 	// Start listening on the tcp port
+	port := getOption(PortOption, options, 0).(int)
 	listener, err := net.Listen("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return nil, err

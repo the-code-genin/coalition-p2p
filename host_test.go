@@ -18,7 +18,7 @@ func TestNewHost(t *testing.T) {
 	// Create a new host
 	port := 3000
 	host, err := NewHost(
-		port,
+		Port(port),
 		Identity(privKey),
 	)
 	if err != nil {
@@ -43,18 +43,16 @@ func TestNewHost(t *testing.T) {
 }
 
 func TestConnection(t *testing.T) {
-	// Create hostA listening on port 3000
-	portA := 3002
-	hostA, err := NewHost(portA)
+	// Create hostA
+	hostA, err := NewHost()
 	if err != nil {
 		t.Error(err)
 	}
 	go hostA.Listen()
 	defer hostA.Close()
 
-	// Create hostB listening on port 3001
-	portB := 3003
-	hostB, err := NewHost(portB)
+	// Create hostB
+	hostB, err := NewHost()
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,8 +70,7 @@ func TestConnection(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = hostB.SendMessage(addrs[0], 1, PingMethod, nil)
-	if err != nil {
+	if err := hostB.Ping(addrs[0]); err != nil {
 		t.Error(err)
 	}
 
