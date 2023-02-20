@@ -5,7 +5,6 @@ import (
 	"sync"
 )
 
-
 // Find network peers closest to a search key
 func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 	var wg sync.WaitGroup
@@ -91,9 +90,6 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 			break
 		}
 
-		// Sort the network response from closest to farthest from the search key
-		newRes = SortPeersByClosest(newRes, searchKey)
-
 		// Refresh lookup nodes for next look up
 		// Dead nodes are filtered out
 		currentLookUpRes = make([]*Peer, 0)
@@ -104,18 +100,29 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 				continue
 			}
 
-			// Get the full peer address
-			peerAddr, err := peer.Address()
-			if err != nil {
-				continue
-			}
+			// Check for keep alive asynchronously
+			wg.Add(1)
+			go func(peer *Peer) {
+				defer wg.Done()
 
-			// Check if peer is alive
-			if err := host.Ping(peerAddr); err != nil {
-				continue
-			}
-			currentLookUpRes = append(currentLookUpRes, peer)
+				// Get the full peer address
+				peerAddr, err := peer.Address()
+				if err != nil {
+					return
+				}
+
+				// Check if peer is alive
+				if err := host.Ping(peerAddr); err != nil {
+					return
+				}
+
+				mutex.Lock()
+				defer mutex.Unlock()
+				currentLookUpRes = append(currentLookUpRes, peer)
+			}(peer)
 		}
+		wg.Wait()
+		currentLookUpRes = SortPeersByClosest(currentLookUpRes, searchKey)
 	}
 
 	// Sort all lookups from closest to farthest
