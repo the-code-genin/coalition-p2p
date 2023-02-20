@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Setup host
-	host, err := coalition.NewHost(4000)
+	host, err := coalition.NewHost(4030)
 	if err != nil {
 		panic(err)
 	}
@@ -52,15 +52,24 @@ func main() {
 	fmt.Printf("Search key [%s]\n", hex.EncodeToString(searchKey))
 
 	maxPeers := int(coalition.DefaultMaxPeers)
-	prevLookUpRes := []*coalition.Peer{bootNode}
+	prevLookUpRes := make([]*coalition.Peer, 0)
 	currentLookUpRes := []*coalition.Peer{bootNode}
 	for {
+		// Current lookups becomes previous lookups
+		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
+
 		// Find up to max peers closest set of nodes to the key from the lookup nodes
 		newRes := make([]*coalition.Peer, 0)
 		for i := 0; len(newRes) < maxPeers && i < len(currentLookUpRes); i++ {
 			wg.Add(1)
 			go func(lookupNode *coalition.Peer) {
 				defer wg.Done()
+
+				// Skip this DHT's host
+				if bytes.Equal(lookupNode.Key(), hostKey[:]) {
+					return
+				}
+
 				lookupNodeAddr, err := lookupNode.Address()
 				if err != nil {
 					panic(err)
@@ -99,15 +108,6 @@ func main() {
 					old := false
 					for i := 0; i < len(prevLookUpRes); i++ {
 						if bytes.Equal(prevLookUpRes[i].Key(), peer.Key()) {
-							old = true
-							break
-						}
-					}
-					if old {
-						continue
-					}
-					for i := 0; i < len(currentLookUpRes); i++ {
-						if bytes.Equal(currentLookUpRes[i].Key(), peer.Key()) {
 							old = true
 							break
 						}
@@ -165,7 +165,6 @@ func main() {
 		// Refresh lookup nodes for next look up
 		// Dead nodes are filtered out
 		// If the node has been queried before it is skipped
-		prevLookUpRes = append(prevLookUpRes, currentLookUpRes...)
 		currentLookUpRes = make([]*coalition.Peer, 0)
 		for _, peer := range newRes {
 			peerAddr, err := peer.Address()
