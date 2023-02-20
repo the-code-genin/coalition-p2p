@@ -31,7 +31,7 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 			go func(lookupNode *Peer) {
 				defer wg.Done()
 
-				// Skip this DHT's host
+				// Skip this DHT's host for lookups
 				if bytes.Equal(lookupNode.Key(), hostKey[:]) {
 					return
 				}
@@ -56,11 +56,6 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 					peer, err := NewPeerFromAddress(responseAddr)
 					if err != nil {
 						return
-					}
-
-					// Skip this DHT's host
-					if bytes.Equal(peer.Key(), hostKey[:]) {
-						continue
 					}
 
 					// Skip old look ups
@@ -105,12 +100,19 @@ func (dht *DHT) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		// Dead nodes are filtered out
 		currentLookUpRes = make([]*Peer, 0)
 		for _, peer := range newRes {
+			// Skip this DHT's host for next round of lookups
+			if bytes.Equal(peer.Key(), hostKey[:]) {
+				prevLookUpRes = append(prevLookUpRes, peer)
+				continue
+			}
+
+			// Get the full peer address
 			peerAddr, err := peer.Address()
 			if err != nil {
 				continue
 			}
 
-			// Check if alive
+			// Check if peer is alive
 			if err := dht.host.Ping(peerAddr); err != nil {
 				continue
 			}
