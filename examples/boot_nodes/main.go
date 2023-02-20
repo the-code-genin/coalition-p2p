@@ -7,12 +7,10 @@ import (
 	"github.com/the-code-genin/coalition-p2p"
 )
 
-var wg sync.WaitGroup
-
 func main() {
-	noNodes := int(coalition.DefaultConcurrentRequests)
+	var wg sync.WaitGroup
 	hosts := make([]*coalition.Host, 0)
-	for i := 0; i < noNodes; i++ {
+	for i := 0; i < int(coalition.DefaultConcurrentRequests); i++ {
 		// Create new host
 		host, err := coalition.NewHost()
 		if err != nil {
@@ -39,7 +37,7 @@ func main() {
 		hosts = append(hosts, host)
 	}
 
-	fmt.Printf("[%d] boot nodes online\n", noNodes)
+	fmt.Printf("[%d] boot nodes online\n", len(hosts))
 	wg.Add(1)
 	wg.Wait()
 }
