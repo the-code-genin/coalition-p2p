@@ -37,3 +37,6 @@ const FindNodeMethod = "find_node"
 
 // Size of 64 bit integers in bytes
 const Int64Len = 8
+
+// TCP Read/Write deadlines
+const TCPIODeadline = time.Second * 100

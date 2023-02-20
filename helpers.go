@@ -13,6 +13,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 // Format the node details into a node address
@@ -192,6 +193,8 @@ func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 
 // Writes a payload to the connection
 func WriteToConn(conn net.Conn, data []byte) error {
+	conn.SetWriteDeadline(time.Now().Add(TCPIODeadline))
+
 	// Determine the size of the payload
 	buffer := make([]byte, 8)
 	big.NewInt(int64(len(data))).FillBytes(buffer)
@@ -206,6 +209,7 @@ func WriteToConn(conn net.Conn, data []byte) error {
 
 // Reads a payload from the connection
 func ReadFromConn(conn net.Conn) ([]byte, error) {
+	conn.SetReadDeadline(time.Now().Add(TCPIODeadline))
 	requestReader := bufio.NewReader(conn)
 
 	// Parse the size of the request payload in bytes
