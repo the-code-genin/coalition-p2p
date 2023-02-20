@@ -10,7 +10,7 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-	noNodes := 12
+	noNodes := int(coalition.DefaultConcurrentRequests)
 	hosts := make([]*coalition.Host, 0)
 	for i := 0; i < noNodes; i++ {
 		// Create new host
