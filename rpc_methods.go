@@ -3,7 +3,41 @@ package coalition
 import (
 	"encoding/hex"
 	"fmt"
+	"sync"
 )
+
+// Helper to filter dead nodes from a list of peers
+func (host *Host) filterDeadNodes(peers []*Peer) []*Peer {
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+
+	res := make([]*Peer, 0)
+	for _, peer := range peers {
+
+		// Check for keep alive asynchronously
+		wg.Add(1)
+		go func(peer *Peer) {
+			defer wg.Done()
+
+			// Get the full peer address
+			peerAddr, err := peer.Address()
+			if err != nil {
+				return
+			}
+
+			// Check if peer is alive
+			if err := host.Ping(peerAddr); err != nil {
+				return
+			}
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			res = append(res, peer)
+		}(peer)
+	}
+	wg.Wait()
+	return res
+}
 
 // Send a ping to the host at the address
 func (host *Host) Ping(address string) error {
