@@ -2,7 +2,6 @@ package coalition
 
 import (
 	"bytes"
-	"math"
 	"sync"
 )
 
@@ -20,6 +19,9 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		activeNodes,
 		searchKey,
 	)
+	if len(currentLookUpRes) == 0 {
+		return make([]*Peer, 0), nil
+	}
 
 	// Do a recursive search until all closest nodes have been found
 	for {
@@ -28,12 +30,7 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		prevLookUpRes = SortPeersByClosest(prevLookUpRes, searchKey)
 
 		// Max distance of furtherest peer in prev lookups
-		maxDistance := uint64(math.MaxUint64)
-		if len(prevLookUpRes) > 0 {
-			maxDistance = BytesToUint64(
-				XORBytes(prevLookUpRes[len(prevLookUpRes)-1].Key(), searchKey),
-			)
-		}
+		maxDistance := XORBytes(prevLookUpRes[len(prevLookUpRes)-1].Key(), searchKey)
 
 		// Find closer set of nodes to the key from the lookup nodes
 		newRes := make([]*Peer, 0)
@@ -99,8 +96,8 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 
 					// Ensure this peer is closer than the furtherest of the previous peers
 					// And ensure the peer isn't this host
-					distance := BytesToUint64(XORBytes(peer.Key(), searchKey))
-					if distance > maxDistance || bytes.Equal(peer.Key(), hostKey[:]) {
+					distance := XORBytes(peer.Key(), searchKey)
+					if bytes.Compare(distance, maxDistance) > 0 || bytes.Equal(peer.Key(), hostKey[:]) {
 						prevLookUpRes = append(prevLookUpRes, peer)
 						continue
 					}
