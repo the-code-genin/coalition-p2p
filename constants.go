@@ -12,7 +12,7 @@ const Int64Len = 8
 // Size of peer key in bytes
 const PeerKeySize = sha1.Size
 
-// Size of peer payload signature in bytes
+// Size of peer signature in bytes
 const PeerSignatureSize = ed25519.PublicKeySize + ed25519.SignatureSize
 
 // Peer identity option

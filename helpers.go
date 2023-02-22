@@ -173,6 +173,7 @@ func MergeSortPeers(
 	return output
 }
 
+// Do a merge sort for peers from closest to farthest from a search key
 func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 	return MergeSortPeers(
 		peers,
@@ -253,4 +254,24 @@ func Int64ToBytes(data int64) []byte {
 // Converts bytes into a 64 bit integer
 func BytesToInt64(data []byte) int64 {
 	return new(big.Int).SetBytes(data).Int64()
+}
+
+// Find the XOR operation output of two slices.
+// Length of output is min(len(sliceA), len(sliceB))
+func XORBytes(sliceA, sliceB []byte) []byte {
+	output := make([]byte, 0)
+	for i := 0; i < len(sliceA) && i < len(sliceB); i++ {
+		output = append(output, sliceA[i]^sliceB[i])
+	}
+	return output
+}
+
+// Find the AND operation output of two slices.
+// Length of output is min(len(sliceA), len(sliceB))
+func ANDBytes(sliceA, sliceB []byte) []byte {
+	output := make([]byte, 0)
+	for i := 0; i < len(sliceA) && i < len(sliceB); i++ {
+		output = append(output, sliceA[i]&sliceB[i])
+	}
+	return output
 }
