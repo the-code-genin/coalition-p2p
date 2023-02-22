@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"math/big"
+	"math"
 	"time"
 )
 
@@ -80,19 +80,12 @@ func (table *RouteTable) calculateKBucketKey(key []byte) (string, error) {
 	if len(key) != len(table.locusKey) {
 		return "", fmt.Errorf("key length miss-match")
 	}
-	distanceFromLocus := new(big.Int).Xor(
-		new(big.Int).SetBytes(table.locusKey),
-		new(big.Int).SetBytes(key),
-	)
+	distanceFromLocus := XORBytes(table.locusKey, key)
 	noBits := len(table.locusKey) * 8
 	for i := int64(noBits - 1); i >= 0; i-- {
-		key := new(big.Int).Exp(
-			new(big.Int).SetInt64(2),
-			new(big.Int).SetInt64(i),
-			nil,
-		)
-		if new(big.Int).And(distanceFromLocus, key).Cmp(key) == 0 {
-			return hex.EncodeToString(key.Bytes()), nil
+		key := Uint64ToBytes(uint64(math.Pow(2, float64(i))))
+		if bytes.Equal(ANDBytes(distanceFromLocus, key), key) {
+			return hex.EncodeToString(key), nil
 		}
 	}
 	return hex.EncodeToString([]byte{0}), nil

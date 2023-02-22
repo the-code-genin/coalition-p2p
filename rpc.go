@@ -69,7 +69,7 @@ func HandleRPCConnection(host *Host, conn net.Conn) {
 	}
 
 	// Parse the peer listening port, signature and request from the payload
-	peerPort := BytesToInt64(payload[:Int64Len])
+	peerPort := BytesToUint64(payload[:Int64Len])
 	peerSignature := payload[Int64Len : Int64Len+PeerSignatureSize]
 	peerRequest := payload[Int64Len+PeerSignatureSize:]
 

@@ -13,9 +13,14 @@ func (host *Host) filterDeadNodes(peers []*Peer) (activeNodes, deadNodes []*Peer
 
 	activeNodes = make([]*Peer, 0)
 	deadNodes = make([]*Peer, 0)
-	for _, peer := range peers {
 
-		// Check for keep alive asynchronously
+	addDeadNode := func(peer *Peer) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		deadNodes = append(deadNodes, peer)
+	}
+
+	for _, peer := range peers {
 		wg.Add(1)
 		go func(peer *Peer) {
 			defer wg.Done()
@@ -23,13 +28,13 @@ func (host *Host) filterDeadNodes(peers []*Peer) (activeNodes, deadNodes []*Peer
 			// Get the full peer address
 			peerAddr, err := peer.Address()
 			if err != nil {
-				deadNodes = append(deadNodes, peer)
+				addDeadNode(peer)
 				return
 			}
 
 			// Check if peer is alive
 			if err := host.Ping(peerAddr); err != nil {
-				deadNodes = append(deadNodes, peer)
+				addDeadNode(peer)
 				return
 			}
 

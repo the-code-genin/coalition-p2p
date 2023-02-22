@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/sha1"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"net"
 	"regexp"
 	"strconv"
@@ -179,14 +179,8 @@ func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 		peers,
 		make([]*Peer, 0),
 		func(peerA, peerB *Peer) int {
-			distanceA := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerA.Key()),
-				new(big.Int).SetBytes(searchKey),
-			).Bytes()
-			distanceB := new(big.Int).Xor(
-				new(big.Int).SetBytes(peerB.Key()),
-				new(big.Int).SetBytes(searchKey),
-			).Bytes()
+			distanceA := XORBytes(peerA.Key(), searchKey)
+			distanceB := XORBytes(peerB.Key(), searchKey)
 			return bytes.Compare(distanceB, distanceA)
 		},
 	)
@@ -196,7 +190,7 @@ func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 func WriteToConn(conn net.Conn, data []byte) error {
 	conn.SetWriteDeadline(time.Now().Add(TCPIODeadline))
 
-	if _, err := conn.Write(Int64ToBytes(int64(len(data)))); err != nil {
+	if _, err := conn.Write(Uint64ToBytes(uint64(len(data)))); err != nil {
 		return err
 	}
 	if _, err := conn.Write(data); err != nil {
@@ -216,7 +210,7 @@ func ReadFromConn(conn net.Conn) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	payloadSize := BytesToInt64(payloadSizeBuffer)
+	payloadSize := BytesToUint64(payloadSizeBuffer)
 
 	// Read the payload from the connection
 	payload := make([]byte, payloadSize)
@@ -246,14 +240,15 @@ func RecoverPeerKeyFromPeerSignature(signature, hash []byte) ([]byte, error) {
 }
 
 // Converts a 64 bit integer to bytes
-func Int64ToBytes(data int64) []byte {
+func Uint64ToBytes(data uint64) []byte {
 	buffer := make([]byte, 8)
-	return big.NewInt(data).FillBytes(buffer)
+	binary.BigEndian.PutUint64(buffer, data)
+	return buffer
 }
 
 // Converts bytes into a 64 bit integer
-func BytesToInt64(data []byte) int64 {
-	return new(big.Int).SetBytes(data).Int64()
+func BytesToUint64(data []byte) uint64 {
+	return binary.BigEndian.Uint64(data)
 }
 
 // Find the XOR operation output of two slices.

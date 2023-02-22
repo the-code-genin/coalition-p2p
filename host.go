@@ -145,7 +145,7 @@ func (host *Host) SendMessage(
 
 	// Prepare the full request payload
 	requestPayload := make([]byte, 0)
-	requestPayload = append(requestPayload, Int64ToBytes(int64(hostPort))...)
+	requestPayload = append(requestPayload, Uint64ToBytes(uint64(hostPort))...)
 	requestPayload = append(requestPayload, requestSignature[:]...)
 	requestPayload = append(requestPayload, serializedRequest...)
 
