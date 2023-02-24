@@ -21,12 +21,8 @@ func FindNodeHandler(host *Host, remotePeer *Peer, req RPCRequest) (interface{},
 	if err != nil {
 		return nil, err
 	}
-	peers, err := host.table.SortPeersByProximity(key)
-	if err != nil {
-		return nil, err
-	}
 	addrs := make([]string, 0)
-	for _, peer := range peers {
+	for _, peer := range host.table.SortPeersByProximity(key) {
 		peerAddr, err := peer.Address()
 		if err != nil {
 			return nil, err

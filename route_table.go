@@ -111,11 +111,8 @@ func (table *RouteTable) SortPeersByLastSeen() []*Peer {
 
 // Sort the peers in the route table by proximity to a certain key
 // From closest to farthest
-func (table *RouteTable) SortPeersByProximity(key []byte) ([]*Peer, error) {
-	if len(key) != len(table.locusKey) {
-		return nil, fmt.Errorf("key length miss-match")
-	}
-	return SortPeersByClosest(table.peers, key), nil
+func (table *RouteTable) SortPeersByProximity(key []byte) []*Peer {
+	return SortPeersByClosest(table.peers, key)
 }
 
 // Remove a peer from the route table
