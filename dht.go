@@ -108,16 +108,17 @@ func (host *Host) FindClosestNodes(searchKey []byte) ([]*Peer, error) {
 		}
 		wg.Wait()
 
-		// Unable to find closer nodes to the search key
-		if len(newRes) == 0 {
+		// Filter dead nodes from the list of closer node obtained
+		activeNodes, deadNodes := host.filterDeadNodes(newRes)
+		inactiveNodes = append(inactiveNodes, deadNodes...)
+
+		// Unable to find closer live nodes to the search key
+		if len(activeNodes) == 0 {
 			break
 		}
 
 		// Refresh lookup nodes for next look up
-		// Dead nodes are noted to prevent interference with future results
-		activeNodes, deadNodes := host.filterDeadNodes(newRes)
 		currentLookUpRes = SortPeersByClosest(activeNodes, searchKey)
-		inactiveNodes = append(inactiveNodes, deadNodes...)
 	}
 
 	// Sort all lookups from closest to farthest
