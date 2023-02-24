@@ -189,8 +189,12 @@ func SortPeersByClosest(peers []*Peer, searchKey []byte) []*Peer {
 // Writes a payload to the connection
 func WriteToConn(conn net.Conn, data []byte) error {
 	conn.SetWriteDeadline(time.Now().Add(TCPIODeadline))
+	payloadSize := uint64(len(data))
+	if payloadSize > TCPIOBufferSize {
+		return fmt.Errorf("request payload exceeds buffer size")
+	}
 
-	if _, err := conn.Write(Uint64ToBytes(uint64(len(data)))); err != nil {
+	if _, err := conn.Write(Uint64ToBytes(payloadSize)); err != nil {
 		return err
 	}
 	if _, err := conn.Write(data); err != nil {
@@ -211,6 +215,9 @@ func ReadFromConn(conn net.Conn) ([]byte, error) {
 		return nil, err
 	}
 	payloadSize := BytesToUint64(payloadSizeBuffer)
+	if payloadSize > TCPIOBufferSize {
+		return nil, fmt.Errorf("request payload exceeds buffer size")
+	}
 
 	// Read the payload from the connection
 	payload := make([]byte, payloadSize)

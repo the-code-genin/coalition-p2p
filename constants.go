@@ -44,3 +44,6 @@ const FindNodeMethod = "find_node"
 
 // TCP Read/Write deadlines
 const TCPIODeadline = time.Minute
+
+// TCP IO buffer size in bytes(1 MB)
+const TCPIOBufferSize = 1024 * 1024
