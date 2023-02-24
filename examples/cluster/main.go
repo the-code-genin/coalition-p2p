@@ -14,11 +14,10 @@ func main() {
 		log.Fatalf("At least one boot node address must be specified in the arguments")
 	}
 
-	// Spawn a 1000 nodes for the cluster
 	var wg sync.WaitGroup
 	bootNodes := os.Args[1:]
 	hosts := make([]*coalition.Host, 0)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < int(coalition.DefaultConcurrentRequests); i++ {
 		host, err := coalition.NewHost()
 		if err != nil {
 			panic(err)
